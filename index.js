@@ -7,10 +7,8 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 })
 
-// ambil semua channel dari env
 const channels = process.env.CHANNEL_IDS.split(",")
 
-// helper function kirim pesan ke semua channel
 function broadcast(message) {
   channels.forEach((id) => {
     const channel = client.channels.cache.get(id)
@@ -24,67 +22,102 @@ function broadcast(message) {
   })
 }
 
-// random picker
 function randomMessage(list) {
   return list[Math.floor(Math.random() * list.length)]
 }
 
 client.once("clientReady", () => {
-  console.log(`⚓ Bot online sebagai ${client.user.tag}`)
+  console.log(`🌙 Bot Ramadhan aktif sebagai ${client.user.tag}`)
 
-  broadcast("⚓ Pirate Helper dah online ya bang!")
+  broadcast("🌙 Halo semua! Ramadhan vibes mode ON. Semoga puasanya lancar ya!")
 
   // 🌙 SAHUR
   cron.schedule("30 3 * * *", () => {
     const messages = [
-      "🌙 Sahur time crew! Jangan lupa makan biar kuat ngoding nanti ⚓",
-      "🍚 Wake up pirates! Sahur dulu sebelum berlayar di lautan code.",
-      "⚓ Captain reminder: sahur dulu, bug nanti."
+      "🌙 Sahur time! Bangun bangun, jangan sampe kesiangan!",
+      "🍚 Alarm sahur bunyi! Gas makan dulu sebelum lanjut tidur lagi.",
+      "👀 Siapa yang masih melek? Yuk sahur dulu sebelum imsak.",
+      "⚡ Quick reminder: isi energi dulu, nanti lanjut mimpi indah."
     ]
 
     broadcast(randomMessage(messages))
   })
 
-  // 😴 HABIS SUBUH (TIDUR)
+  // 😴 HABIS SUBUH
   cron.schedule("45 4 * * *", () => {
-    broadcast("😴 Waktunya tidur crew. Recharge energy sebelum coding lagi.")
+    const messages = [
+      "😴 Abis subuh, waktunya balik rebahan.",
+      "🛏️ Crew yang begadang: ini waktunya tidur dulu ya.",
+      "🌙 Subuh done. Sekarang recharge energy mode."
+    ]
+
+    broadcast(randomMessage(messages))
   })
 
   // 🌞 PAGI
   cron.schedule("0 7 * * *", () => {
     const messages = [
-      "🌞 Good morning pirates! Saatnya produktif lagi.",
-      "⚓ Pagi crew! Progress kecil tetap progress.",
-      "💻 Morning coding session dimulai."
+      "🌞 Selamat pagi! Semoga hari ini lancar puasanya.",
+      "☀️ Morning check! Jangan lupa minum... eh, puasa ding.",
+      "✨ Hari baru, semangat baru. Walau perut kosong."
     ]
 
     broadcast(randomMessage(messages))
   })
 
-  // 🔥 SORE CODING
+  // 😴 TIDUR SIANG
+  cron.schedule("0 12 * * *", () => {
+    const messages = [
+      "😴 Siang vibes. Saatnya power nap sebentar.",
+      "🛌 Tidur siang bentar biar kuat sampe buka.",
+      "⚡ Energy saving mode: tidur dulu ga sih."
+    ]
+
+    broadcast(randomMessage(messages))
+  })
+
+  // 🌤 NGABUBURIT
   cron.schedule("30 16 * * *", () => {
-    broadcast("🔥 Late afternoon coding session. Drop progress kalian!")
+    const messages = [
+      "🌤 Ngabuburit time! Siapa yang mulai keliling cari takjil?",
+      "🍩 Misi sore hari: hunting takjil.",
+      "👀 Siapa yang udah mulai mikirin es buah?"
+    ]
+
+    broadcast(randomMessage(messages))
   })
 
   // 🌇 BUKA PUASA
   cron.schedule("0 18 * * *", () => {
     const messages = [
-      "🌇 Waktunya buka puasa! Jangan lupa minum dulu sebelum commit code.",
-      "🍹 Iftar time pirates! Break dulu dari debugging.",
-      "⚓ Captain says: buka puasa dulu, bug bisa nunggu."
+      "🌇 Buka puasa time! Minum dulu yang manis.",
+      "🍹 Azan maghrib! Saatnya batalin puasa.",
+      "⚡ Takjil yang ditunggu akhirnya datang juga."
     ]
 
     broadcast(randomMessage(messages))
   })
 
-  // 🌙 NIGHT CODING
+  // 🌙 MALAM
   cron.schedule("0 21 * * *", () => {
-    broadcast("💻 Night coding session dimulai. Let's ship some code ⚓")
+    const messages = [
+      "🌙 Malam Ramadhan vibes. Lagi santai apa nih?",
+      "✨ Night chill session dimulai.",
+      "🍵 Malam-malam enaknya ngobrol santai."
+    ]
+
+    broadcast(randomMessage(messages))
   })
 
-  // 😴 SLEEP
+  // 😴 TIDUR
   cron.schedule("30 23 * * *", () => {
-    broadcast("🌙 Captain reminder: commit code sebelum tidur ⚓")
+    const messages = [
+      "😴 Waktunya istirahat. Jangan lupa set alarm sahur!",
+      "🌙 Good night! Semoga besok puasanya lancar lagi.",
+      "🛌 Sleep mode activated. Sampai ketemu di sahur nanti."
+    ]
+
+    broadcast(randomMessage(messages))
   })
 })
 
