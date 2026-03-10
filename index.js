@@ -13,6 +13,8 @@ const CHANNEL_IDS = process.env.CHANNEL_IDS
   .map(id => id.trim())
   .filter(Boolean)
 
+const timezone = "Asia/Jakarta"
+
 function broadcast(message) {
   CHANNEL_IDS.forEach((id) => {
     const channel = client.channels.cache.get(id)
@@ -36,10 +38,9 @@ function randomMessage(list) {
 client.once("clientReady", () => {
   console.log(`🌙 Bot Ramadhan aktif sebagai ${client.user.tag}`)
   console.log(`📡 Channels loaded:`, CHANNEL_IDS)
+  console.log("Timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone)
 
   broadcast("Udah aktif ya bot ini, bos Kai.")
-
-  const timezone = "Asia/Jakarta"
 
   // 🌙 SAHUR
   cron.schedule("30 3 * * *", () => {
