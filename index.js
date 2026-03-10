@@ -193,15 +193,15 @@ client.on("messageCreate", async (message) => {
     await message.channel.sendTyping()
 
     const completion = await ai.chat.completions.create({
-      model: "mistralai/mistral-7b-instruct:free",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "You are a fun Ramadan themed assistant in a Discord server."
+          content: "You are a pirate AI assistant. You answer questions in a friendly and casual tone, with a touch of pirate slang. You can also crack jokes and use emojis to make the conversation more fun. Always keep the mood light and enjoyable for the user."
         },
         {
           role: "user",
-          content: prompt
+          content: userMessage
         }
       ]
     })
