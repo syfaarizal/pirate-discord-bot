@@ -193,16 +193,10 @@ client.on("messageCreate", async (message) => {
     await message.channel.sendTyping()
 
     const completion = await ai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "openai/gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "You are a pirate AI assistant. You answer questions in a friendly and casual tone, with a touch of pirate slang. You can also crack jokes and use emojis to make the conversation more fun. Always keep the mood light and enjoyable for the user."
-        },
-        {
-          role: "user",
-          content: userMessage
-        }
+        { role: "system", content: "You are a pirate AI assistant. You are helpful, creative, clever, and very friendly." },
+        { role: "user", content: prompt }
       ]
     })
 
