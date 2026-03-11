@@ -1,5 +1,28 @@
+const { PermissionFlagsBits } = require("discord.js")
 const { getConfig, setEnabled, setTime, isValid, VALID_REMINDERS, DEFAULTS } = require("../utils/reminderConfig")
 const { rescheduleAll } = require("../cron/scheduler")
+
+// ─────────────────────────────────────
+// Permission check: Admin atau Moderator
+// ─────────────────────────────────────
+function isAdminOrMod(member) {
+  if (!member) return false
+
+  // Server owner selalu bisa
+  if (member.guild.ownerId === member.id) return true
+
+  // Cek permission Administrator atau ManageGuild
+  if (
+    member.permissions.has(PermissionFlagsBits.Administrator) ||
+    member.permissions.has(PermissionFlagsBits.ManageGuild)
+  ) return true
+
+  // Cek nama role mengandung "admin" atau "mod" (case-insensitive)
+  return member.roles.cache.some(role => {
+    const name = role.name.toLowerCase()
+    return name.includes("admin") || name.includes("moderator") || name.includes("mod")
+  })
+}
 
 // ─────────────────────────────────────
 // Helper: format jam jadi HH:MM
@@ -36,12 +59,14 @@ async function handleList(message) {
       {
         name: "Commands",
         value: [
-          "`@bot reminder on <nama>` — aktifkan",
-          "`@bot reminder off <nama>` — matikan",
-          "`@bot reminder set <nama> <HH:MM>` — ubah jam",
+          "`@bot reminder on <nama>` — aktifkan satu reminder",
+          "`@bot reminder off <nama>` — matikan satu reminder",
+          "`@bot reminder on all` — aktifkan **semua** reminder",
+          "`@bot reminder off all` — matikan **semua** reminder",
+          "`@bot reminder set <nama> <HH:MM>` — ubah jam reminder",
           "`@bot reminder reset` — reset semua ke default",
           "",
-          `Nama yang valid: \`${VALID_REMINDERS.join("\`, \`")}\``
+          `Nama yang valid: \`all\`, \`${VALID_REMINDERS.join("\`, \`")}\``
         ].join("\n"),
         inline: false
       }
@@ -54,12 +79,37 @@ async function handleList(message) {
 }
 
 // ─────────────────────────────────────
+// Subcommand: on all / off all
+// ─────────────────────────────────────
+async function handleToggleAll(message, enabled, client) {
+  for (const name of VALID_REMINDERS) {
+    setEnabled(name, enabled)
+  }
+  rescheduleAll(client)
+
+  if (enabled) {
+    return message.reply(
+      "✅ Semua reminder udah **ON** lagi cuy! Gua bakal nge-ping di semua jadwal. Siap-siap ya wkwk 🔔"
+    )
+  } else {
+    return message.reply(
+      "❌ Semua reminder udah **OFF**. Gua gak bakal ganggu kalian sama sekali. Tenang, gua masih ada kalau mau ngobrol 😌"
+    )
+  }
+}
+
+// ─────────────────────────────────────
 // Subcommand: on / off
 // ─────────────────────────────────────
 async function handleToggle(message, name, enabled, client) {
-  if (!isValid(name)) {
+  // Handle "all" keyword
+  if (name === "all" || name === "semua") {
+    return handleToggleAll(message, enabled, client)
+  }
+
+  if (!name || !isValid(name)) {
     return message.reply(
-      `Nama reminder **${name}** gak valid cuy 😅\nYang valid: \`${VALID_REMINDERS.join("`, `")}\``
+      `Nama reminder **${name || "?"}** gak valid cuy 😅\nYang valid: \`all\`, \`${VALID_REMINDERS.join("\`, \`")}\``
     )
   }
 
@@ -86,6 +136,7 @@ async function handleToggle(message, name, enabled, client) {
   const pick = replies[Math.floor(Math.random() * replies.length)]
   return message.reply(pick)
 }
+
 
 // ─────────────────────────────────────
 // Subcommand: set <nama> <HH:MM>
@@ -168,8 +219,17 @@ async function reminderCommand(message, client) {
   // parts[0] = "reminder", parts[1] = subcommand, dst
   const sub = parts[1]?.toLowerCase()
 
+  // list boleh semua orang
   if (!sub || sub === "list") {
     return handleList(message)
+  }
+
+  // Semua subcommand selain list butuh permission Admin/Mod
+  if (!isAdminOrMod(message.member)) {
+    const username = message.author.globalName || message.author.username
+    return message.reply(
+      `Eh ${username}, maaf ya — command ini khusus Admin/Moderator aja 🔒 Lu bisa cek jadwal dengan \`@bot reminder list\` kok.`
+    )
   }
 
   if (sub === "on" || sub === "off") {
