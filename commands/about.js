@@ -21,7 +21,10 @@ async function aboutCommand(message) {
           "• Ingat percakapan per user",
           "• Ngirim reminder otomatis (Ramadhan schedule)",
           "• Anti-spam cooldown",
-          "• Punya utility commands"
+          "• Punya utility commands",
+          "• On/off reminder sesuka hati",
+          "• Setting jam reminder juga bisa",
+          "• Bahkan jadi temen curhat tentang mantan juga bisa wkwkwk"
         ].join("\n"),
         inline: false
       },

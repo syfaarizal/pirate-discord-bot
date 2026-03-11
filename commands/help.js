@@ -16,6 +16,10 @@ async function helpCommand(message) {
           "`@PirateHelper ping` — Ngecek latency bot.",
           "`@PirateHelper about` — Info tentang gua.",
           "`@PirateHelper forget` — Hapus memory percakapan kita (fresh start).",
+          "`@PirateHelper reminder list` — Lihat semua reminder + statusnya.",
+          "`@PirateHelper reminder on/off <nama>` — Aktifin/matiin reminder.",
+          "`@PirateHelper reminder set <nama> <HH:MM>` — Ubah jam reminder.",
+          "`@PirateHelper reminder reset` — Reset semua ke default.",
         ].join("\n"),
         inline: false
       },
