@@ -2,7 +2,7 @@ async function aboutCommand(message) {
   const embed = {
     color: 0x5865f2,
     title: "⚓ Tentang Gua — Pirate Helper",
-    description: "Jadi gitu, gua tuh bot Discord yang dibuat buat nemenin kalian. Sarkastik? Iya. Friendly? Juga iya. Kontradiktif? Mungkin.",
+    description: "Jadi gitu, gua tuh bot Discord yang dibuat buat nemenin kalian. Sarkastik? Iya. Friendly? Juga iya. Kontradiktif? Mungkin. Tergantung mood gua sih wkwk. Tapi yang pasti, gua care banget sama kalian semua! ❤️",
     fields: [
       {
         name: "🤖 Powered by",
