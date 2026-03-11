@@ -1,10 +1,8 @@
 const cron = require("node-cron")
-const { broadcast, randomPick } = require("../utils/broadcast")
-const { getConfig } = require("../utils/reminderConfig")
+const { broadcastToGuild, guildChannelMap, randomPick } = require("../utils/broadcast")
+const { getAllConfigs } = require("../utils/reminderConfig")
 
 const timezone = "Asia/Jakarta"
-
-const activeTasks = new Map()
 
 const MESSAGES = {
   sahur: [
@@ -56,40 +54,43 @@ const MESSAGES = {
   ]
 }
 
-function rescheduleAll(client) {
-  // Destroy semua task yang lagi aktif
-  for (const [key, task] of activeTasks) {
-    task.stop()
-    activeTasks.delete(key)
-    console.log(`🗑️  Cron stopped: ${key}`)
-  }
+function registerCronJobs(client) {
+  console.log("\n📅 Registering per-minute scheduler (per-guild)...")
 
-  const config = getConfig()
+  cron.schedule("* * * * *", async () => {
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
+    const hour = now.getHours()
+    const minute = now.getMinutes()
 
-  for (const [key, reminder] of Object.entries(config)) {
-    if (!reminder.enabled) {
-      console.log(`⏸️  Reminder skipped (OFF): ${key}`)
-      continue
+    const registeredGuildIds = [...guildChannelMap.keys()]
+    if (registeredGuildIds.length === 0) return
+
+    const allConfigs = getAllConfigs()
+
+    for (const guildId of registeredGuildIds) {
+      const guildConfig = allConfigs[guildId] || null
+
+      for (const [key, messages] of Object.entries(MESSAGES)) {
+        const { DEFAULTS } = require("../utils/reminderConfig")
+        const reminder = guildConfig?.[key]
+          ? { ...DEFAULTS[key], ...guildConfig[key] }
+          : DEFAULTS[key]
+
+        if (!reminder.enabled) continue
+        if (reminder.hour !== hour || reminder.minute !== minute) continue
+
+        // Match! Kirim ke guild ini
+        await broadcastToGuild(client, guildId, randomPick(messages))
+        console.log(`📣 [Cron] ${reminder.label} → guild ${guildId} @ ${String(hour).padStart(2,"0")}:${String(minute).padStart(2,"0")}`)
+      }
     }
+  }, { timezone })
 
-    const cronExpr = `${reminder.minute} ${reminder.hour} * * *`
-
-    const task = cron.schedule(cronExpr, () => {
-      const messages = MESSAGES[key]
-      if (!messages) return
-      broadcast(client, randomPick(messages))
-      console.log(`📣 [Cron] ${reminder.label} message sent. (${cronExpr})`)
-    }, { timezone })
-
-    activeTasks.set(key, task)
-    console.log(`✅ Cron registered: ${key.padEnd(12)} @ ${String(reminder.hour).padStart(2, "0")}:${String(reminder.minute).padStart(2, "0")} WIB`)
-  }
+  console.log("✅ Per-minute scheduler aktif!\n")
 }
 
-function registerCronJobs(client) {
-  console.log("\n📅 Mendaftarkan cron jobs dari config...")
-  rescheduleAll(client)
-  console.log("✅ Semua cron jobs terdaftar!\n")
+function rescheduleAll() {
+  console.log("ℹ️  rescheduleAll() dipanggil — config akan dibaca otomatis di tick berikutnya.")
 }
 
 module.exports = { registerCronJobs, rescheduleAll }

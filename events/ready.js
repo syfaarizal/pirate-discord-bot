@@ -1,12 +1,9 @@
 const { ActivityType } = require("discord.js")
-const { broadcast, CHANNEL_IDS } = require("../utils/broadcast")
+const { broadcast, buildGuildChannelMap, CHANNEL_IDS } = require("../utils/broadcast")
 const { registerCronJobs } = require("../cron/scheduler")
 
 async function onReady(client) {
 
-  // ─────────────────────────────────────
-  // 1. Log info bot
-  // ─────────────────────────────────────
   console.log(`\n⚓ ════════════════════════════════════`)
   console.log(`   ✅ Bot online sebagai : ${client.user.tag}`)
   console.log(`   🌍 Timezone           : Asia/Jakarta (WIB)`)
@@ -14,9 +11,6 @@ async function onReady(client) {
   console.log(`   🏠 Guilds terdaftar   : ${client.guilds.cache.size}`)
   console.log(`⚓ ════════════════════════════════════\n`)
 
-  // ─────────────────────────────────────
-  // 2. Set activity/status di Discord
-  // ─────────────────────────────────────
   client.user.setPresence({
     activities: [{
       name: "mention gua buat ngobrol ⚓",
@@ -26,9 +20,6 @@ async function onReady(client) {
   })
   console.log("🎮 Bot presence/status berhasil di-set.")
 
-  // ─────────────────────────────────────
-  // 3. Validasi semua channel ID
-  // ─────────────────────────────────────
   console.log(`\n📡 Validasi ${CHANNEL_IDS.length} channel(s)...`)
 
   if (CHANNEL_IDS.length === 0) {
@@ -48,16 +39,13 @@ async function onReady(client) {
     }
   }
 
-  // ─────────────────────────────────────
-  // 4. Kirim pesan online ke semua channel
-  // ─────────────────────────────────────
+  console.log("\n🗺️  Building guild-channel map...")
+  await buildGuildChannelMap(client)
+
   console.log("\n📣 Kirim pesan online ke semua channel...")
   await broadcast(client, "Aye aye crue! ⚓ Gua udah online nih, siap nemenin kalian.")
   console.log("✅ Pesan online terkirim.\n")
 
-  // ─────────────────────────────────────
-  // 5. Daftarin semua cron jobs
-  // ─────────────────────────────────────
   registerCronJobs(client)
 }
 
