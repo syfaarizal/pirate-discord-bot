@@ -16,10 +16,11 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 })
 
-client.once("ready", () => onReady(client))
+client.once("clientReady", () => onReady(client))
 client.on("interactionCreate", (i) => onInteractionCreate(i))
 
 process.on("unhandledRejection", err => console.error("⚠️ Unhandled Rejection:", err))
