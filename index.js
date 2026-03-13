@@ -1,4 +1,3 @@
-cat > /root/pirate-discord-bot/index.js << 'EOF'
 require("dotenv").config()
 
 const { Client, GatewayIntentBits } = require("discord.js")
@@ -27,4 +26,3 @@ process.on("unhandledRejection", err => console.error("⚠️ Unhandled Rejectio
 process.on("uncaughtException",  err => console.error("💥 Uncaught Exception:",  err))
 
 client.login(process.env.TOKEN)
-EOF
