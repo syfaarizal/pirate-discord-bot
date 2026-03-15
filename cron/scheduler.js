@@ -1,5 +1,5 @@
 const cron = require("node-cron")
-const { broadcastToGuild, randomPick } = require("../utils/broadcast")
+const { randomPick } = require("../utils/broadcast")
 const { getAllConfigs, REMINDER_DEFAULTS } = require("../utils/reminderConfig")
 
 const timezone = "Asia/Jakarta"
@@ -15,13 +15,28 @@ const MESSAGES = {
   tidur:      ["Bestie udah jam segini, TIDUR. Besok sahur lagi 😭🛌", "Hoamm~ yuk tidur, jangan yapping mulu wkwk 💤", "Ini reminder buat tidur. Gua serius. fr fr. Gnight! 🌙", "TIDUR CUY! No debate, understood the assignment ya! 🛌"],
 }
 
+async function sendToChannels(client, channels, message) {
+  for (const channelId of channels) {
+    try {
+      const channel = await client.channels.fetch(channelId)
+      if (!channel) continue
+      await channel.send({
+        content: `@everyone ${message}`,
+        allowedMentions: { parse: ["everyone"] }
+      })
+    } catch (err) {
+      console.error(`⚠️ Gagal kirim reminder ke channel ${channelId}:`, err.message)
+    }
+  }
+}
+
 function registerCronJobs(client) {
   console.log("\n📅 Registering per-minute cron scheduler...")
 
   cron.schedule("* * * * *", async () => {
-    const now    = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
-    const hour   = now.getHours()
-    const minute = now.getMinutes()
+    const now     = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
+    const hour    = now.getHours()
+    const minute  = now.getMinutes()
     const configs = getAllConfigs()
 
     for (const [guildId, config] of Object.entries(configs)) {
@@ -32,7 +47,8 @@ function registerCronJobs(client) {
         if (!reminder.enabled) continue
         if (reminder.hour !== hour || reminder.minute !== minute) continue
 
-        await broadcastToGuild(client, config.channels, randomPick(MESSAGES[key]))
+        const message = randomPick(MESSAGES[key])
+        await sendToChannels(client, config.channels, message)
         console.log(`📣 [Cron] ${reminder.label} → guild ${guildId} @ ${String(hour).padStart(2,"0")}:${String(minute).padStart(2,"0")}`)
       }
     }
