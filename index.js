@@ -19,7 +19,7 @@ const client = new Client({
   ]
 })
 
-client.once("ready", () => onReady(client))
+client.once("ready", () => ready(client))
 client.on("interactionCreate", (i) => onInteractionCreate(i))
 
 process.on("unhandledRejection", err => console.error("⚠️ Unhandled Rejection:", err))
