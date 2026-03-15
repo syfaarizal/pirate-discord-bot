@@ -15,6 +15,13 @@ const MESSAGES = {
   tidur:      ["Bestie udah jam segini, TIDUR. Besok sahur lagi 😭🛌", "Hoamm~ yuk tidur, jangan yapping mulu wkwk 💤", "Ini reminder buat tidur. Gua serius. fr fr. Gnight! 🌙", "TIDUR CUY! No debate, understood the assignment ya! 🛌"],
 }
 
+const STARTUP_MESSAGES = [
+  "⚓ Ahoy! Gua barusan restart nih. Semua sistem udah online lagi, jangan khawatir~",
+  "⚓ Gua balik lagi cuy! Ada yang kangen gak? Jangan jawab. Gua tau jawabannya 💀",
+  "⚓ Bot online! Gua udah siap nemenin kalian lagi. Missed me? fr fr.",
+  "⚓ Pirate Helper udah aktif lagi! Semua reminder tetep jalan, tenang aja bestie 🏴‍☠️",
+]
+
 async function sendToChannels(client, channels, message) {
   for (const channelId of channels) {
     try {
@@ -25,13 +32,33 @@ async function sendToChannels(client, channels, message) {
         allowedMentions: { parse: ["everyone"] }
       })
     } catch (err) {
-      console.error(`⚠️ Gagal kirim reminder ke channel ${channelId}:`, err.message)
+      console.error(`⚠️ Gagal kirim ke channel ${channelId}:`, err.message)
     }
+  }
+}
+
+async function broadcastStartup(client) {
+  const configs = getAllConfigs()
+  const message = randomPick(STARTUP_MESSAGES)
+  let totalSent = 0
+
+  for (const [guildId, config] of Object.entries(configs)) {
+    if (!config.channels?.length) continue
+    await sendToChannels(client, config.channels, message)
+    totalSent += config.channels.length
+    console.log(`📣 [Startup] Notif dikirim → guild ${guildId}`)
+  }
+
+  if (totalSent === 0) {
+    console.log("⚠️ [Startup] Gak ada channel yang di-set. Jalanin /set-reminder-channel dulu!")
   }
 }
 
 function registerCronJobs(client) {
   console.log("\n📅 Registering per-minute cron scheduler...")
+
+  // Kirim startup message ke semua guild
+  broadcastStartup(client)
 
   cron.schedule("* * * * *", async () => {
     const now     = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
