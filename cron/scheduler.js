@@ -5,21 +5,57 @@ const { getAllConfigs, REMINDER_DEFAULTS } = require("../utils/reminderConfig")
 const timezone = "Asia/Jakarta"
 
 const MESSAGES = {
-  sahur:      ["Sahur time cuy! Jangan sampe kelewatan yh 🍚", "OI SAHUR! Gua tau males bangun tapi ya harus dong bestie 😭🍽️", "Sahur time~ kalian makan apa nih?", "Banguuun! Sahur dulu, jangan skip 🌙"],
-  subuh:      ["Udah sahur? Mau tidur lagi silakan, gua gak judge 😏", "Kaum balik tidur setelah subuh: understood the assignment 💀", "Tidur setelah subuh hits different. Tapi jangan kesiangan ya bestie."],
-  pagi:       ["Morning crue! Semangat puasanya, hari ini harus slay! ☀️", "Selamat pagi~ jangan kebuka-buka kulkas wkwk 🫡", "Good morning! Semoga vibes hari ini bagus dan puasanya lancar 🙏", "Rise and shine bestie! ☀️"],
-  siang:      ["Siang-siang gini paling valid tidur sebentar. Energy saving mode on 💤", "Jam 12, perut laper, mata berat. Solusinya tidur aja wkwk 😭", "Lowkey jam segini ujian banget. Tapi kalian kuat, no cap! 💪"],
-  ngabuburit: ["Udah masuk zona ngabuburit! Bentar lagi buka cuy 🌅", "Ngabuburit time~ mau ngapain nih? Semua pilihan valid fr.", "Sore-sore gini vibes-nya beda ya. Tahan dikit lagi bestie! 🙏"],
-  buka:       ["BUKA PUASAAA CUY! KALIAN SURVIVE HARI INI, FR FR SLAY! 🎉🍴", "WIHH BUKAA! Selamat berbuka crue, kalian kuat banget 🍽️", "YEAYY SAATNYA MAKAN! Pelan-pelan dulu ya bestie 😭🙏", "BUKA PUASA! Udah understood the assignment seharian, reward yourself! 🌙✨"],
-  malam:      ["Malam crue~ pada ngapain? Kalau mau ngobrol gua ada 😌", "Malem-malem vibes-nya santai ya. Gimana puasanya? 🌙", "Evening check~ abis buka pada ngapain aja? 👀"],
-  tidur:      ["Bestie udah jam segini, TIDUR. Besok sahur lagi 😭🛌", "Hoamm~ yuk tidur, jangan yapping mulu wkwk 💤", "Ini reminder buat tidur. Gua serius. fr fr. Gnight! 🌙", "TIDUR CUY! No debate, understood the assignment ya! 🛌"],
+  sahur: [
+    "OI BANGUN SAHUR ANJIR 🍚 gua tau males tapi ya harus lah",
+    "sahur cuy jangan skip nanti lemes sendiri 💀",
+    "SAHUR!! kalian makan apa btw? gua penasaran",
+    "banguuun~ sahur dulu baru boleh tidur lagi fr",
+  ],
+  subuh: [
+    "subuh udah, mau balik tidur? understood the assignment 😏",
+    "kaum balik tidur setelah subuh rise up 💀",
+    "tidur lagi setelah subuh hits different ngl. tapi jangan kesiangan ya",
+  ],
+  pagi: [
+    "pagi crue!! semangat atau minimal pura-pura semangat ☀️",
+    "selamat pagi~ jangan kebuka kulkas loh ya 🫡",
+    "rise and shine bestie. hari ini harus slay no excuse",
+    "morning!! vibes hari ini gimana? semoga bagus fr",
+  ],
+  siang: [
+    "jam 12 siang. perut laper, mata berat. valid banget tidur siang 💤",
+    "siang-siang gini paling bener energy saving mode on wkwk",
+    "jam segini tuh ujian banget. tapi kalian kuat no cap 💪",
+  ],
+  ngabuburit: [
+    "bentar lagi buka cuy tahan dikit 🌅",
+    "ngabuburit time~ mau ngapain? semua pilihan valid fr",
+    "sore-sore vibes-nya beda ya. hampir sampe bestie 🙏",
+  ],
+  buka: [
+    "BUKAAAAA CUY KALIAN SURVIVE!! FR FR SLAY 🎉",
+    "WIHH BUKA!! selamat berbuka, kalian kuat banget sumpah 🍽️",
+    "MAKAN WAKTU NYA!! pelan-pelan dulu jangan kalap 😭",
+    "BUKA PUASA!! understood the assignment seharian, reward yourself 🌙",
+  ],
+  malam: [
+    "malam crue~ pada ngapain? kalau mau ngobrol gua ada 😌",
+    "malem-malem vibes-nya santai ya. gimana hari ini?",
+    "evening check~ abis buka ngapain aja? 👀",
+  ],
+  tidur: [
+    "TIDUR CUY udah jam segini 😭🛌 besok sahur lagi",
+    "hoamm yuk tidur, jangan yapping mulu 💤",
+    "ini reminder buat tidur. gua serius. fr fr. gnight 🌙",
+    "BOBO!! no debate, understood the assignment ya 🛌",
+  ],
 }
 
 const STARTUP_MESSAGES = [
-  "⚓ Ahoy! Gua barusan restart nih. Semua sistem udah online lagi, jangan khawatir~",
-  "⚓ Gua balik lagi cuy! Ada yang kangen gak? Jangan jawab. Gua tau jawabannya 💀",
-  "⚓ Bot online! Gua udah siap nemenin kalian lagi. Missed me? fr fr.",
-  "⚓ Pirate Helper udah aktif lagi! Semua reminder tetep jalan, tenang aja bestie 🏴‍☠️",
+  "gua balik lagi 🏴‍☠️ ada yang kangen? jangan jawab.",
+  "online~ missed me? jangan bohong 💀",
+  "Kichi udah aktif lagi cuy, semua sistem jalan fr ⚓",
+  "abis restart, gua balik. kayak bad penny aja wkwk 🏴‍☠️",
 ]
 
 async function sendToChannels(client, channels, message) {
@@ -57,7 +93,6 @@ async function broadcastStartup(client) {
 function registerCronJobs(client) {
   console.log("\n📅 Registering per-minute cron scheduler...")
 
-  // Kirim startup message ke semua guild
   broadcastStartup(client)
 
   cron.schedule("* * * * *", async () => {
