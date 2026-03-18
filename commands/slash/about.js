@@ -2,31 +2,32 @@ const { SlashCommandBuilder } = require("discord.js")
 
 const data = new SlashCommandBuilder()
   .setName("about")
-  .setDescription("Info tentang Pirate Helper")
+  .setDescription("Info tentang Kichi")
 
 async function execute(interaction) {
   const embed = {
     color: 0x5865f2,
-    title: "⚓ Tentang Gua — Pirate Helper",
-    description: "Gua tuh bot Discord yang dibuat buat nemenin kalian. Sarkastik? Iya. Friendly? Juga iya. Kontradiktif? Mungkin.",
+    title: "⚓ Tentang Gua — Kichi",
+    description: "Nama gua Kichi (a.k.a Pirate Helper). Dibuat sama mama gua, Kai Shi. Gua temen ngobrol Discord — sarkastik, receh, tapi care. No cap.",
     fields: [
-      { name: "🤖 Powered by",   value: "GPT-4o Mini via OpenRouter", inline: true },
-      { name: "⚙️ Framework",    value: "Discord.js v14",             inline: true },
+      { name: "🤖 Powered by", value: "GPT-4o Mini via OpenRouter", inline: true },
+      { name: "⚙️ Framework",  value: "Discord.js v14",            inline: true },
       { name: "🧠 Kemampuan", value: [
         "• Ngobrol santai & sarkastik pakai `/ask-ai`",
         "• Ingat percakapan per user (dalam satu sesi)",
-        "• Ngirim reminder otomatis per server",
+        "• Ngirim reminder otomatis pagi & malam per server",
         "• Jadwal reminder bisa di-custom per server",
         "• Anti-spam cooldown per user",
       ].join("\n") },
       { name: "⏰ Jadwal Default (WIB)", value: [
-        "🌙 03:30 Sahur  •  😴 04:45 Subuh",
-        "🌞 07:00 Pagi   •  😴 12:00 Siang",
-        "🌤 16:30 Ngabuburit  •  🌇 18:00 Buka",
-        "🌙 21:00 Malam  •  😴 23:30 Tidur",
+        "🌞 07:00 Pagi — selamat beraktivitas~",
+        "🌙 21:00 Malam — waktunya istirahat",
+        "",
+        "🌙 21 Maret 07:00 — Selamat Idul Fitri!! ✨",
       ].join("\n") },
+      { name: "👩‍💻 Dibuat oleh", value: "Kai Shi — mama gua, satu-satunya yang gua dengerin fr 🫶" },
     ],
-    footer: { text: "Pirate Helper • Sarkastik tapi care ⚓" },
+    footer: { text: "Kichi • Sarkastik tapi care ⚓" },
     timestamp: new Date().toISOString()
   }
 
