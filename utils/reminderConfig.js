@@ -4,14 +4,8 @@ const path = require("path")
 const CONFIG_PATH = path.join(__dirname, "../data/reminders.json")
 
 const REMINDER_DEFAULTS = {
-  sahur:      { enabled: true,  hour: 3,  minute: 30, label: "Sahur",       emoji: "🌙" },
-  subuh:      { enabled: true,  hour: 4,  minute: 45, label: "Habis Subuh", emoji: "😴" },
-  pagi:       { enabled: true,  hour: 7,  minute: 0,  label: "Pagi",        emoji: "🌞" },
-  siang:      { enabled: true,  hour: 12, minute: 0,  label: "Siang",       emoji: "😴" },
-  ngabuburit: { enabled: true,  hour: 16, minute: 30, label: "Ngabuburit",  emoji: "🌤" },
-  buka:       { enabled: true,  hour: 18, minute: 0,  label: "Buka Puasa",  emoji: "🌇" },
-  malam:      { enabled: true,  hour: 21, minute: 0,  label: "Malam",       emoji: "🌙" },
-  tidur:      { enabled: true,  hour: 23, minute: 30, label: "Tidur",       emoji: "😴" },
+  pagi:  { enabled: true, hour: 7,  minute: 0,  label: "Pagi",  emoji: "🌞" },
+  malam: { enabled: true, hour: 21, minute: 0,  label: "Malam", emoji: "🌙" },
 }
 
 const VALID_REMINDERS = Object.keys(REMINDER_DEFAULTS)
@@ -92,7 +86,7 @@ function setTime(guildId, name, hour, minute) {
 function resetConfig(guildId) {
   const all = loadAll()
   const channels = all[guildId]?.channels || []
-  all[guildId] = { channels }   // hapus reminder settings, simpan channel
+  all[guildId] = { channels }
   saveAll(all)
 }
 
