@@ -9,7 +9,7 @@ const MESSAGES = {
     "pagi crue!! semangat ya hari ini, atau minimal pura-pura semangat dulu ☀️",
     "morning!! vibes hari ini harus bagus, no excuse 🌞",
     "selamat pagi~ jangan lupa sarapan, jangan skip 🫡",
-    "rise and shine bestie. hari ini bakal slay, fr fr ☀️",
+    "rise and shine bestie! semangat ya hari ini ☀️",
     "pagi pagi~ semoga harinya gak berat-berat amat ya, fighting!! 🌤",
   ],
   malam: [
@@ -22,9 +22,9 @@ const MESSAGES = {
 }
 
 const IDUL_FITRI_MESSAGES = [
-  "🌙✨ SELAMAT HARI RAYA IDUL FITRI 1446 H!! Minal aidin wal faizin, mohon maaf lahir dan batin ya crue~ semoga hari ini penuh kebahagiaan fr fr 🎉",
-  "🌙✨ EID MUBARAK CRUE!! Taqabbalallahu minna wa minkum~ maaf kalau selama ini Kichi pernah annoying, no cap 😭🙏 selamat lebaran!!",
-  "🌙✨ HAPPY EID AL-FITR!! Minal aidin wal faizin bestie~ semoga dosa-dosa kita diampuni dan hari ini hits different karena lebaran 🎉✨",
+  "🌙✨ Selamat Hari Raya Idul Fitri 1446 H crue!! Dari gua (Kichi) dan mami gua Kai Shi — minal aidin wal faizin, mohon maaf lahir dan batin ya 🙏 semoga hari ini penuh kebahagiaan fr fr 🎉",
+  "🌙✨ EID MUBARAK!! Gua, Kichi, dan mami gua Kai Shi ngucapin selamat lebaran buat kalian semua~ taqabbalallahu minna wa minkum, maaf kalau selama ini gua pernah annoying no cap 😭🙏",
+  "🌙✨ Selamat Lebaran crue!! Kichi & Kai Shi (mami gua yang baik hati dan cantik 🫶) ngucapin minal aidin wal faizin — semoga dosa-dosa kita diampuni dan hari ini hits different karena lebaran ✨🎉",
 ]
 
 const STARTUP_MESSAGES = [
