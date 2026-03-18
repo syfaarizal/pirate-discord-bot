@@ -5,51 +5,27 @@ const { getAllConfigs, REMINDER_DEFAULTS } = require("../utils/reminderConfig")
 const timezone = "Asia/Jakarta"
 
 const MESSAGES = {
-  sahur: [
-    "OI BANGUN SAHUR ANJIR 🍚 gua tau males tapi ya harus lah",
-    "sahur cuy jangan skip nanti lemes sendiri 💀",
-    "SAHUR!! kalian makan apa btw? gua penasaran",
-    "banguuun~ sahur dulu baru boleh tidur lagi fr",
-  ],
-  subuh: [
-    "subuh udah, mau balik tidur? understood the assignment 😏",
-    "kaum balik tidur setelah subuh rise up 💀",
-    "tidur lagi setelah subuh hits different ngl. tapi jangan kesiangan ya",
-  ],
   pagi: [
-    "pagi crue!! semangat atau minimal pura-pura semangat ☀️",
-    "selamat pagi~ jangan kebuka kulkas loh ya 🫡",
-    "rise and shine bestie. hari ini harus slay no excuse",
-    "morning!! vibes hari ini gimana? semoga bagus fr",
-  ],
-  siang: [
-    "jam 12 siang. perut laper, mata berat. valid banget tidur siang 💤",
-    "siang-siang gini paling bener energy saving mode on wkwk",
-    "jam segini tuh ujian banget. tapi kalian kuat no cap 💪",
-  ],
-  ngabuburit: [
-    "bentar lagi buka cuy tahan dikit 🌅",
-    "ngabuburit time~ mau ngapain? semua pilihan valid fr",
-    "sore-sore vibes-nya beda ya. hampir sampe bestie 🙏",
-  ],
-  buka: [
-    "BUKAAAAA CUY KALIAN SURVIVE!! FR FR SLAY 🎉",
-    "WIHH BUKA!! selamat berbuka, kalian kuat banget sumpah 🍽️",
-    "MAKAN WAKTU NYA!! pelan-pelan dulu jangan kalap 😭",
-    "BUKA PUASA!! understood the assignment seharian, reward yourself 🌙",
+    "pagi crue!! semangat ya hari ini, atau minimal pura-pura semangat dulu ☀️",
+    "morning!! vibes hari ini harus bagus, no excuse 🌞",
+    "selamat pagi~ jangan lupa sarapan, jangan skip 🫡",
+    "rise and shine bestie. hari ini bakal slay, fr fr ☀️",
+    "pagi pagi~ semoga harinya gak berat-berat amat ya, fighting!! 🌤",
   ],
   malam: [
-    "malam crue~ pada ngapain? kalau mau ngobrol gua ada 😌",
-    "malem-malem vibes-nya santai ya. gimana hari ini?",
-    "evening check~ abis buka ngapain aja? 👀",
-  ],
-  tidur: [
-    "TIDUR CUY udah jam segini 😭🛌 besok sahur lagi",
-    "hoamm yuk tidur, jangan yapping mulu 💤",
-    "ini reminder buat tidur. gua serius. fr fr. gnight 🌙",
-    "BOBO!! no debate, understood the assignment ya 🛌",
+    "malem crue~ udah waktunya istirahat, jangan begadang mulu 🌙",
+    "good night bestie!! besok masih ada hari baru, gak usah overthink 💤",
+    "oke udah malem, yuk bobo. jangan yapping sampe subuh 😭🛌",
+    "malam~ semoga istirahatnya enak dan mimpinya bagus fr 🌙",
+    "gnight!! healing dulu, besok lanjut lagi 💤",
   ],
 }
+
+const IDUL_FITRI_MESSAGES = [
+  "🌙✨ SELAMAT HARI RAYA IDUL FITRI 1446 H!! Minal aidin wal faizin, mohon maaf lahir dan batin ya crue~ semoga hari ini penuh kebahagiaan fr fr 🎉",
+  "🌙✨ EID MUBARAK CRUE!! Taqabbalallahu minna wa minkum~ maaf kalau selama ini Kichi pernah annoying, no cap 😭🙏 selamat lebaran!!",
+  "🌙✨ HAPPY EID AL-FITR!! Minal aidin wal faizin bestie~ semoga dosa-dosa kita diampuni dan hari ini hits different karena lebaran 🎉✨",
+]
 
 const STARTUP_MESSAGES = [
   "gua balik lagi 🏴‍☠️ ada yang kangen? jangan jawab.",
@@ -57,6 +33,12 @@ const STARTUP_MESSAGES = [
   "Kichi udah aktif lagi cuy, semua sistem jalan fr ⚓",
   "abis restart, gua balik. kayak bad penny aja wkwk 🏴‍☠️",
 ]
+
+// Tanggal spesial Idul Fitri: 21 Maret 2026, jam 07:00 WIB
+const IDUL_FITRI = { date: 21, month: 2, year: 2026, hour: 7, minute: 0 } // month: 0-indexed (2 = Maret)
+
+// Track biar Idul Fitri cuma kekirim sekali
+let idulFitriSent = false
 
 async function sendToChannels(client, channels, message) {
   for (const channelId of channels) {
@@ -90,6 +72,17 @@ async function broadcastStartup(client) {
   }
 }
 
+function isIdulFitriTime(now) {
+  return (
+    !idulFitriSent &&
+    now.getFullYear()  === IDUL_FITRI.year   &&
+    now.getMonth()     === IDUL_FITRI.month  &&
+    now.getDate()      === IDUL_FITRI.date   &&
+    now.getHours()     === IDUL_FITRI.hour   &&
+    now.getMinutes()   === IDUL_FITRI.minute
+  )
+}
+
 function registerCronJobs(client) {
   console.log("\n📅 Registering per-minute cron scheduler...")
 
@@ -101,6 +94,19 @@ function registerCronJobs(client) {
     const minute  = now.getMinutes()
     const configs = getAllConfigs()
 
+    // ── Cek Idul Fitri special broadcast ──
+    if (isIdulFitriTime(now)) {
+      idulFitriSent = true
+      const eidMsg = randomPick(IDUL_FITRI_MESSAGES)
+      console.log("🌙 [Idul Fitri] Ngirim ucapan ke semua guild!")
+      for (const [guildId, config] of Object.entries(configs)) {
+        if (!config.channels?.length) continue
+        await sendToChannels(client, config.channels, eidMsg)
+        console.log(`   ✅ Guild ${guildId} done`)
+      }
+    }
+
+    // ── Reminder harian biasa ──
     for (const [guildId, config] of Object.entries(configs)) {
       if (!config.channels?.length) continue
 
