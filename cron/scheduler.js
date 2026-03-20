@@ -9,7 +9,7 @@ const MESSAGES = {
     "pagi crue!! semangat ya hari ini, atau minimal pura-pura semangat dulu ☀️",
     "morning!! vibes hari ini harus bagus, no excuse 🌞",
     "selamat pagi~ jangan lupa sarapan, jangan skip 🫡",
-    "rise and shine bestie! semangat ya hari ini ☀️",
+    "rise and shine bestie. hari ini bakal slay, fr fr ☀️",
     "pagi pagi~ semoga harinya gak berat-berat amat ya, fighting!! 🌤",
   ],
   malam: [
@@ -22,20 +22,18 @@ const MESSAGES = {
 }
 
 const IDUL_FITRI_MESSAGES = [
-  "🌙✨ Selamat Hari Raya Idul Fitri 1446 H crue!! Dari gua (Kichi) dan mami gua Kai Shi — minal aidin wal faizin, mohon maaf lahir dan batin ya 🙏 semoga hari ini penuh kebahagiaan fr fr 🎉",
-  "🌙✨ EID MUBARAK!! Gua, Kichi, dan mami gua Kai Shi ngucapin selamat lebaran buat kalian semua~ taqabbalallahu minna wa minkum, maaf kalau selama ini gua pernah annoying no cap 😭🙏",
+  "🌙✨ Selamat Hari Raya Idul Fitri 1446 H crue!! Dari gua (Kichi) dan mami gua Kai Shi (yang paling cantik dan baik hati) — minal aidin wal faizin, mohon maaf lahir dan batin ya 🙏 semoga hari ini penuh kebahagiaan fr fr 🎉",
+  "🌙✨ EID MUBARAK!! Gua, Kichi, dan mami gua yang paling cantik Kai Shi ngucapin selamat lebaran buat kalian semua~ taqabbalallahu minna wa minkum, maaf kalau selama ini gua pernah annoying no cap 😭🙏",
   "🌙✨ Selamat Lebaran crue!! Kichi & Kai Shi (mami gua yang baik hati dan cantik 🫶) ngucapin minal aidin wal faizin — semoga dosa-dosa kita diampuni dan hari ini hits different karena lebaran ✨🎉",
 ]
 
 const STARTUP_MESSAGES = [
-  "gua balik lagi 🏴‍☠️ ada yang kangen? jangan jawab.",
-  "online~ missed me? jangan bohong 💀",
   "Kichi udah aktif lagi cuy, semua sistem jalan fr ⚓",
   "abis restart, gua balik. kayak bad penny aja wkwk 🏴‍☠️",
 ]
 
-// Tanggal spesial Idul Fitri: 21 Maret 2026, jam 07:00 WIB
-const IDUL_FITRI = { date: 21, month: 2, year: 2026, hour: 7, minute: 0 } // month: 0-indexed (2 = Maret)
+// Tanggal spesial Idul Fitri: 20 Maret 2026, jam 19:00 WIB
+const IDUL_FITRI = { date: 20, month: 2, year: 2026, hour: 19, minute: 0 } // month: 0-indexed (2 = Maret)
 
 // Track biar Idul Fitri cuma kekirim sekali
 let idulFitriSent = false
