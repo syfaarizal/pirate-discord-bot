@@ -23,17 +23,33 @@ async function execute(interaction) {
       {
         name: "⏰ Reminder (Semua User)",
         value: [
-          "`/reminder list` — Lihat semua jadwal reminder + statusnya.",
+          "`/reminder list` — Lihat semua jadwal + statusnya.",
+          "`/reminder list-text <nama>` — Lihat semua teks pesan sebuah reminder.",
         ].join("\n")
       },
       {
-        name: "⏰ Reminder (Admin/Mod Only) 🔒",
+        name: "⏰ Reminder — Jadwal (Admin/Mod Only) 🔒",
         value: [
-          "`/reminder on <nama>` — Aktifin reminder.",
-          "`/reminder off <nama>` — Matiin reminder.",
+          "`/reminder on/off <nama>` — Toggle reminder (pakai `all` untuk semua).",
           "`/reminder set-time <nama> <HH:MM>` — Ubah jam reminder.",
-          "`/reminder reset` — Reset semua reminder ke default.",
-          "`/set-reminder-channel` — Set channel tujuan broadcast reminder.",
+          "`/reminder add <key> <label> <jam>` — Buat custom reminder baru.",
+          "`/reminder delete <key>` — Hapus custom reminder.",
+          "`/reminder reset` — Reset jadwal built-in ke default.",
+        ].join("\n")
+      },
+      {
+        name: "⏰ Reminder — Teks Pesan (Admin/Mod Only) 🔒",
+        value: [
+          "`/reminder add-text <nama> <teks>` — Tambah teks pesan ke reminder.",
+          "`/reminder remove-text <nama> <nomor>` — Hapus salah satu teks.",
+        ].join("\n")
+      },
+      {
+        name: "📢 Channel Reminder (Admin/Mod Only) 🔒",
+        value: [
+          "`/set-reminder-channel add <#channel>` — Tambah channel penerima reminder.",
+          "`/set-reminder-channel remove <#channel>` — Lepas channel dari daftar.",
+          "`/set-reminder-channel list` — Lihat semua channel terdaftar.",
         ].join("\n")
       },
     ],
