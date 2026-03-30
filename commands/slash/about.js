@@ -18,15 +18,15 @@ async function execute(interaction) {
         "• Ngirim reminder otomatis per server",
         "• Jadwal, teks pesan, dan channel reminder bisa di-custom Admin/Mod",
         "• Anti-spam cooldown per user",
-        "• Buat curhatin mantan juga bisa kok wkwkwk",
       ].join("\n") },
       { name: "⏰ Jadwal Default (WIB)", value: [
         "🌞 07:00 — selamat beraktivitas~",
+        "☀️ 12:00 — istirahat & makan siang",
         "🌙 21:00 — waktunya istirahat",
         "",
-        "_Admin/Mod bisa tambah reminder sendiri!_",
+        "_Admin/Mod bisa tambah, ubah, atau atur teks reminder sendiri!_",
       ].join("\n") },
-      { name: "👩‍💻 Dibuat oleh", value: "Kai Shi — mami gua yang baik hati dan tidak sombong 🫶" },
+      { name: "👩‍💻 Dibuat oleh", value: "Kai Shi — mama gua, satu-satunya yang gua dengerin fr 🫶" },
     ],
     footer: { text: "Kichi • Sarkastik tapi care ⚓" },
     timestamp: new Date().toISOString()
