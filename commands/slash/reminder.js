@@ -1,17 +1,31 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js")
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+} = require("discord.js")
+
 const {
   getConfig, getMessages,
   setEnabled, setTime, resetConfig,
   addCustomReminder, deleteCustomReminder,
-  addReminderText, removeReminderText, resetMessages,
-  BUILT_IN_KEYS, REMINDER_DEFAULTS, DEFAULT_MESSAGES,
+  addReminderText, removeReminderText,
+  setChannel, removeChannel,
+  BUILT_IN_KEYS, REMINDER_DEFAULTS,
 } = require("../../utils/reminderConfig")
+
+// Helpers
 
 function fmt(h, m) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
 }
 
-// ── Permission check ──
 function isAdminOrMod(member) {
   if (!member) return false
   if (member.guild.ownerId === member.id) return true
@@ -27,95 +41,74 @@ function isAdminOrMod(member) {
 
 function denyNonAdmin(interaction) {
   return interaction.reply({
-    content: "🔒 Command ini khusus Admin/Moderator. Lu bisa lihat jadwal pakai `/reminder list` kok.",
-    ephemeral: true
+    content: "🔒 Command ini khusus Admin/Moderator.",
+    ephemeral: true,
   })
 }
 
-function getAllReminderKeys(config) {
-  const builtIn = BUILT_IN_KEYS
-  const custom  = Object.keys(config.custom || {})
-  return [...builtIn, ...custom]
+function parseTime(timeStr) {
+  if (!/^\d{1,2}:\d{2}$/.test(timeStr)) return null
+  const [h, m] = timeStr.split(":").map(Number)
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null
+  return { h, m }
 }
+
+function getAllReminderEntries(config) {
+  const entries = BUILT_IN_KEYS.map(key => ({ key, ...config[key], isBuiltIn: true }))
+  for (const [key, r] of Object.entries(config.custom || {})) {
+    entries.push({ key, ...r, isBuiltIn: false })
+  }
+  return entries
+}
+
+// Command Definition
 
 const data = new SlashCommandBuilder()
   .setName("reminder")
   .setDescription("Manage jadwal reminder otomatis server ini")
 
-  // list — semua user
+  // ── Public ──
   .addSubcommand(sub => sub
     .setName("list")
     .setDescription("Lihat semua jadwal reminder + statusnya")
   )
 
-  // on — admin/mod
+  // ── Admin: Create ──
   .addSubcommand(sub => sub
-    .setName("on")
-    .setDescription("Aktifkan reminder — Admin/Mod only 🔒")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang, atau 'all')")
-      .setRequired(true)
-    )
-  )
-
-  // off — admin/mod
-  .addSubcommand(sub => sub
-    .setName("off")
-    .setDescription("Matikan reminder — Admin/Mod only 🔒")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang, atau 'all')")
-      .setRequired(true)
-    )
-  )
-
-  // set-time — admin/mod
-  .addSubcommand(sub => sub
-    .setName("set-time")
-    .setDescription("Ubah jam reminder — Admin/Mod only 🔒")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang)")
-      .setRequired(true)
-    )
-    .addStringOption(opt => opt
-      .setName("jam")
-      .setDescription("Format HH:MM, contoh: 04:30")
-      .setRequired(true)
-    )
-  )
-
-  // add — buat custom reminder baru
-  .addSubcommand(sub => sub
-    .setName("add")
-    .setDescription("Buat custom reminder baru — Admin/Mod only 🔒")
+    .setName("create")
+    .setDescription("Buat custom reminder baru 🔒")
     .addStringOption(opt => opt
       .setName("key")
-      .setDescription("ID unik untuk reminder ini (huruf kecil, tanpa spasi, contoh: siang)")
+      .setDescription("ID unik (huruf kecil, tanpa spasi — contoh: sore, break-siang)")
       .setRequired(true)
     )
     .addStringOption(opt => opt
       .setName("label")
-      .setDescription("Nama tampilan reminder (contoh: Istirahat Siang)")
+      .setDescription("Nama tampilan (contoh: Break Sore)")
       .setRequired(true)
     )
     .addStringOption(opt => opt
       .setName("jam")
-      .setDescription("Jam kirim, format HH:MM (contoh: 12:00)")
+      .setDescription("Jam kirim, format HH:MM (contoh: 15:30)")
       .setRequired(true)
     )
     .addStringOption(opt => opt
       .setName("emoji")
-      .setDescription("Emoji untuk reminder ini (opsional, default: 🔔)")
+      .setDescription("Emoji reminder (opsional, default: 🔔)")
       .setRequired(false)
     )
   )
 
-  // delete — hapus custom reminder
+  // ── Admin: Edit (2-step: select → modal) ──
+  .addSubcommand(sub => sub
+    .setName("edit")
+    .setDescription("Edit reminder — pilih reminder lalu pilih aksi 🔒")
+  )
+
+  // ── Admin: Delete ──
   .addSubcommand(sub => sub
     .setName("delete")
-    .setDescription("Hapus custom reminder — Admin/Mod only 🔒")
+    .setDescription("Hapus custom reminder 🔒")
     .addStringOption(opt => opt
       .setName("key")
       .setDescription("Key custom reminder yang mau dihapus")
@@ -123,195 +116,90 @@ const data = new SlashCommandBuilder()
     )
   )
 
-  // add-text — tambah teks ke reminder
-  .addSubcommand(sub => sub
-    .setName("add-text")
-    .setDescription("Tambah teks pesan ke reminder — Admin/Mod only 🔒")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang)")
-      .setRequired(true)
+  // ── Admin: Channel management ──
+  .addSubcommandGroup(group => group
+    .setName("channel")
+    .setDescription("Manage channel tujuan reminder 🔒")
+    .addSubcommand(sub => sub
+      .setName("add")
+      .setDescription("Tambah channel penerima reminder")
+      .addChannelOption(opt => opt
+        .setName("channel")
+        .setDescription("Channel yang mau ditambah")
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(true)
+      )
     )
-    .addStringOption(opt => opt
-      .setName("teks")
-      .setDescription("Teks pesan yang mau ditambah (maks 500 karakter)")
-      .setRequired(true)
-      .setMaxLength(500)
+    .addSubcommand(sub => sub
+      .setName("remove")
+      .setDescription("Lepas channel dari daftar penerima")
+      .addChannelOption(opt => opt
+        .setName("channel")
+        .setDescription("Channel yang mau dilepas")
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(true)
+      )
     )
-  )
-
-  // remove-text — hapus teks dari reminder
-  .addSubcommand(sub => sub
-    .setName("remove-text")
-    .setDescription("Hapus salah satu teks dari reminder — Admin/Mod only 🔒")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang)")
-      .setRequired(true)
-    )
-    .addIntegerOption(opt => opt
-      .setName("nomor")
-      .setDescription("Nomor teks yang mau dihapus (lihat daftar pakai /reminder list-text)")
-      .setRequired(true)
-      .setMinValue(1)
+    .addSubcommand(sub => sub
+      .setName("list")
+      .setDescription("Lihat semua channel yang terdaftar")
     )
   )
 
-  // list-text — lihat semua teks sebuah reminder
-  .addSubcommand(sub => sub
-    .setName("list-text")
-    .setDescription("Lihat semua teks pesan sebuah reminder")
-    .addStringOption(opt => opt
-      .setName("nama")
-      .setDescription("Key reminder (contoh: pagi, malam, siang)")
-      .setRequired(true)
-    )
-  )
-
-  // reset — reset jadwal ke default (custom reminders tetap)
-  .addSubcommand(sub => sub
-    .setName("reset")
-    .setDescription("Reset jadwal built-in ke default — Admin/Mod only 🔒")
-  )
-
-// ────────────────────────────────────────────────────
-// ── Handlers ──
-// ────────────────────────────────────────────────────
+// /reminder list
 
 async function handleList(interaction) {
   const config    = getConfig(interaction.guildId)
   const guildName = interaction.guild?.name || interaction.guildId
 
-  // Built-in
   const builtInRows = BUILT_IN_KEYS.map(key => {
-    const r      = config[key]
-    const status = r.enabled ? "✅ ON " : "❌ OFF"
-    const jam    = fmt(r.hour, r.minute)
-    const defJam = fmt(REMINDER_DEFAULTS[key].hour, REMINDER_DEFAULTS[key].minute)
-    const custom = jam !== defJam ? " *(custom)*" : ""
-    const msgCount = getMessages(config, key).length
-    return `${r.emoji} \`${key.padEnd(10)}\` ${status}  \`${jam}\`${custom}  _(${msgCount} teks)_`
+    const r        = config[key]
+    const status   = r.enabled ? "✅" : "❌"
+    const jam      = fmt(r.hour, r.minute)
+    const defJam   = fmt(REMINDER_DEFAULTS[key].hour, REMINDER_DEFAULTS[key].minute)
+    const modified = jam !== defJam ? " *(custom)*" : ""
+    const count    = getMessages(config, key).length
+    return `${r.emoji} \`${key.padEnd(10)}\` ${status} \`${jam}\`${modified} _(${count} teks)_`
   }).join("\n")
 
-  // Custom
   const customEntries = Object.entries(config.custom || {})
   const customRows = customEntries.length > 0
     ? customEntries.map(([key, r]) => {
-        const status = r.enabled ? "✅ ON " : "❌ OFF"
-        const jam    = fmt(r.hour, r.minute)
-        const msgCount = (r.messages || []).length
-        return `${r.emoji} \`${key.padEnd(10)}\` ${status}  \`${jam}\`  _(${msgCount} teks)_`
+        const status = r.enabled ? "✅" : "❌"
+        const count  = (r.messages || []).length
+        return `${r.emoji} \`${key.padEnd(10)}\` ${status} \`${fmt(r.hour, r.minute)}\` _(${count} teks)_`
       }).join("\n")
-    : "_Belum ada custom reminder. Buat pakai `/reminder add`_"
+    : "_Belum ada. Pakai `/reminder create` untuk buat baru._"
 
   const channelCount = config.channels.length
   const channelInfo  = channelCount > 0
-    ? `${channelCount} channel terdaftar — lihat: \`/set-reminder-channel list\``
-    : "⚠️ Belum ada channel! Pakai `/set-reminder-channel add` dulu."
-
-  const embed = {
-    color: 0x5865f2,
-    title: `⏰ Reminder Schedule — ${guildName}`,
-    description: "Jadwal ini berlaku khusus untuk server ini. Lihat teks pesan pakai `/reminder list-text <nama>`.",
-    fields: [
-      { name: "🔒 Built-in Reminders", value: builtInRows },
-      { name: "✨ Custom Reminders",   value: customRows },
-      { name: "📢 Channel Tujuan",     value: channelInfo },
-      { name: "Admin/Mod Commands 🔒", value: [
-        "`/reminder on/off <nama>` — toggle (pakai 'all' untuk semua)",
-        "`/reminder set-time <nama> <HH:MM>` — ubah jam",
-        "`/reminder add <key> <label> <jam>` — buat custom reminder baru",
-        "`/reminder delete <key>` — hapus custom reminder",
-        "`/reminder add-text <nama> <teks>` — tambah teks pesan",
-        "`/reminder remove-text <nama> <nomor>` — hapus teks pesan",
-        "`/reminder list-text <nama>` — lihat semua teks",
-        "`/reminder reset` — reset built-in ke default",
-      ].join("\n") },
-    ],
-    footer: { text: "Pirate Helper • Config per server ⚓" },
-    timestamp: new Date().toISOString()
-  }
-
-  return interaction.reply({ embeds: [embed] })
-}
-
-async function handleToggle(interaction, enabled) {
-  if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
-
-  const name    = interaction.options.getString("nama").toLowerCase().trim()
-  const guildId = interaction.guildId
-  const config  = getConfig(guildId)
-
-  if (name === "all") {
-    for (const key of BUILT_IN_KEYS) setEnabled(guildId, key, enabled)
-    for (const key of Object.keys(config.custom || {})) setEnabled(guildId, key, enabled)
-    return interaction.reply({
-      content: enabled
-        ? "✅ Semua reminder (built-in + custom) udah **ON**! 🔔"
-        : "❌ Semua reminder udah **OFF**. Gak bakal spam kalian. Tenang 😌"
-    })
-  }
-
-  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
-  if (!allKeys.includes(name)) {
-    return interaction.reply({
-      content: `⚠️ Reminder \`${name}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
-    })
-  }
-
-  setEnabled(guildId, name, enabled)
-  const updated = getConfig(guildId)
-  const r       = BUILT_IN_KEYS.includes(name) ? updated[name] : updated.custom[name]
-  const jam     = fmt(r.hour, r.minute)
+    ? `${channelCount} channel terdaftar — lihat: \`/reminder channel list\``
+    : "⚠️ Belum ada channel! Pakai `/reminder channel add` dulu."
 
   return interaction.reply({
-    content: enabled
-      ? `${r.emoji} Reminder **${r.label}** ✅ ON! Bakal nge-ping jam \`${jam}\` WIB tiap hari.`
-      : `${r.emoji} Reminder **${r.label}** ❌ OFF. Gak bakal ganggu jam segitu lagi.`
+    embeds: [{
+      color: 0x5865f2,
+      title: `⏰ Reminder Schedule — ${guildName}`,
+      fields: [
+        { name: "Built-in", value: builtInRows },
+        { name: "Custom",   value: customRows },
+        { name: "📢 Channel Tujuan", value: channelInfo },
+        { name: "Admin/Mod 🔒", value: [
+          "`/reminder create` — buat custom reminder",
+          "`/reminder edit` — edit jadwal, teks, atau toggle",
+          "`/reminder delete <key>` — hapus custom reminder",
+          "`/reminder channel add/remove/list` — manage channel",
+        ].join("\n") },
+      ],
+      footer: { text: "Pirate Helper • Config per server ⚓" },
+      timestamp: new Date().toISOString(),
+    }],
   })
 }
 
-async function handleSetTime(interaction) {
-  if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
+// /reminder create
 
-  const name    = interaction.options.getString("nama").toLowerCase().trim()
-  const timeStr = interaction.options.getString("jam")
-  const guildId = interaction.guildId
-  const config  = getConfig(guildId)
-
-  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
-  if (!allKeys.includes(name)) {
-    return interaction.reply({
-      content: `⚠️ Reminder \`${name}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
-    })
-  }
-
-  if (!/^\d{1,2}:\d{2}$/.test(timeStr)) {
-    return interaction.reply({ content: "Format jam salah bestie. Contoh: `04:30`, `18:00`", ephemeral: true })
-  }
-
-  const [h, m] = timeStr.split(":").map(Number)
-  if (h < 0 || h > 23 || m < 0 || m > 59) {
-    return interaction.reply({ content: `Jam \`${timeStr}\` gak valid. Hour 0–23, minute 0–59. fr 💀`, ephemeral: true })
-  }
-
-  const oldJam = (() => {
-    if (BUILT_IN_KEYS.includes(name)) return fmt(config[name].hour, config[name].minute)
-    return fmt(config.custom[name].hour, config.custom[name].minute)
-  })()
-
-  setTime(guildId, name, h, m)
-  const updated = getConfig(guildId)
-  const r       = BUILT_IN_KEYS.includes(name) ? updated[name] : updated.custom[name]
-
-  return interaction.reply({
-    content: `${r.emoji} Jam **${r.label}** diubah: \`${oldJam}\` → \`${fmt(h, m)}\` WIB. Catat!`
-  })
-}
-
-async function handleAdd(interaction) {
+async function handleCreate(interaction) {
   if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
 
   const key     = interaction.options.getString("key").toLowerCase().trim().replace(/\s+/g, "-")
@@ -320,49 +208,305 @@ async function handleAdd(interaction) {
   const emoji   = interaction.options.getString("emoji")?.trim() || "🔔"
   const guildId = interaction.guildId
 
-  // Validasi key
   if (!/^[a-z0-9-]+$/.test(key)) {
     return interaction.reply({
-      content: "Key harus huruf kecil, angka, atau tanda `-` aja. Contoh: `siang`, `break-sore`. fr 💀",
-      ephemeral: true
+      content: "Key harus huruf kecil, angka, atau `-` aja. Contoh: `sore`, `break-siang`.",
+      ephemeral: true,
     })
   }
 
   if (BUILT_IN_KEYS.includes(key)) {
     return interaction.reply({
-      content: `\`${key}\` itu nama bawaan bot, gak bisa dipake. Coba nama lain.`,
-      ephemeral: true
+      content: `\`${key}\` adalah nama bawaan bot. Pakai nama lain.`,
+      ephemeral: true,
     })
   }
 
-  if (!/^\d{1,2}:\d{2}$/.test(timeStr)) {
-    return interaction.reply({ content: "Format jam salah. Contoh: `12:00`, `15:30`", ephemeral: true })
+  const time = parseTime(timeStr)
+  if (!time) {
+    return interaction.reply({
+      content: "Format jam salah. Contoh valid: `12:00`, `15:30`.",
+      ephemeral: true,
+    })
   }
 
-  const [h, m] = timeStr.split(":").map(Number)
-  if (h < 0 || h > 23 || m < 0 || m > 59) {
-    return interaction.reply({ content: `Jam \`${timeStr}\` gak valid. Hour 0–23, minute 0–59.`, ephemeral: true })
-  }
-
-  const ok = addCustomReminder(guildId, key, { label, emoji, hour: h, minute: m })
+  const ok = addCustomReminder(guildId, key, { label, emoji, hour: time.h, minute: time.m })
   if (!ok) {
     return interaction.reply({
       content: `⚠️ Reminder \`${key}\` udah ada. Ganti nama key-nya.`,
-      ephemeral: true
+      ephemeral: true,
     })
   }
 
   return interaction.reply({
     content: [
       `${emoji} Custom reminder **${label}** (\`${key}\`) berhasil dibuat!`,
-      `⏰ Jam: \`${fmt(h, m)}\` WIB  |  Status: ✅ ON`,
+      `⏰ Jam: \`${fmt(time.h, time.m)}\` WIB  |  Status: ✅ ON`,
       ``,
-      `Sekarang tambahin teks pesannya pakai:`,
-      `\`/reminder add-text ${key} <teks pesan>\``,
-      `_(Kalau belum ada teks, reminder gak bakal kekirim)_`,
-    ].join("\n")
+      `Sekarang tambahin teks pesannya lewat \`/reminder edit\` → pilih \`${key}\` → **Tambah Teks**.`,
+      `_(Tanpa teks, reminder gak bakal kekirim)_`,
+    ].join("\n"),
   })
 }
+
+// /reminder edit — Step 1: Select Menu
+
+async function handleEdit(interaction) {
+  if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
+
+  const config  = getConfig(interaction.guildId)
+  const entries = getAllReminderEntries(config)
+
+  if (entries.length === 0) {
+    return interaction.reply({
+      content: "Belum ada reminder. Buat dulu pakai `/reminder create`.",
+      ephemeral: true,
+    })
+  }
+
+  const options = entries.map(r => ({
+    label:       `${r.emoji} ${r.label} (${r.key})`,
+    description: `⏰ ${fmt(r.hour, r.minute)} WIB  •  ${r.enabled ? "✅ ON" : "❌ OFF"}`,
+    value:       r.key,
+  }))
+
+  const row = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId("reminder_edit_select")
+      .setPlaceholder("Pilih reminder yang mau diedit...")
+      .addOptions(options)
+  )
+
+  return interaction.reply({
+    content: "**Step 1/2** — Pilih reminder mana yang mau diedit:",
+    components: [row],
+    ephemeral: true,
+  })
+}
+
+// /reminder edit — Step 2: Action Buttons
+// (dipanggil dari interactionCreate setelah select menu)
+
+async function handleEditSelectMenu(interaction) {
+  const selectedKey = interaction.values[0]
+  const config      = getConfig(interaction.guildId)
+  const isBuiltIn   = BUILT_IN_KEYS.includes(selectedKey)
+  const r           = isBuiltIn ? config[selectedKey] : config.custom?.[selectedKey]
+
+  if (!r) {
+    return interaction.update({
+      content: "⚠️ Reminder gak ketemu. Mungkin udah dihapus.",
+      components: [],
+    })
+  }
+
+  const toggleLabel = r.enabled ? "❌ Matiin" : "✅ Aktifin"
+  const toggleStyle = r.enabled ? ButtonStyle.Danger : ButtonStyle.Success
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`reminder_toggle:${selectedKey}`)
+      .setLabel(toggleLabel)
+      .setStyle(toggleStyle),
+    new ButtonBuilder()
+      .setCustomId(`reminder_settime:${selectedKey}`)
+      .setLabel("⏰ Ubah Jam")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`reminder_addtext:${selectedKey}`)
+      .setLabel("➕ Tambah Teks")
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`reminder_removetext:${selectedKey}`)
+      .setLabel("🗑️ Hapus Teks")
+      .setStyle(ButtonStyle.Secondary),
+  )
+
+  const msgCount = getMessages(config, selectedKey).length
+
+  return interaction.update({
+    content: [
+      `**Step 2/2** — \`${selectedKey}\` — ${r.emoji} **${r.label}**`,
+      `⏰ \`${fmt(r.hour, r.minute)}\` WIB  •  ${r.enabled ? "✅ ON" : "❌ OFF"}  •  ${msgCount} teks`,
+    ].join("\n"),
+    components: [row],
+  })
+}
+
+// Button Handlers (dipanggil dari interactionCreate)
+
+async function handleToggleButton(interaction, key) {
+  const config    = getConfig(interaction.guildId)
+  const isBuiltIn = BUILT_IN_KEYS.includes(key)
+  const r         = isBuiltIn ? config[key] : config.custom?.[key]
+  if (!r) return interaction.reply({ content: "Reminder gak ketemu.", ephemeral: true })
+
+  const newState = !r.enabled
+  setEnabled(interaction.guildId, key, newState)
+
+  return interaction.reply({
+    content: newState
+      ? `${r.emoji} **${r.label}** ✅ ON — bakal nge-ping jam \`${fmt(r.hour, r.minute)}\` WIB.`
+      : `${r.emoji} **${r.label}** ❌ OFF — gak bakal ganggu lagi.`,
+    ephemeral: true,
+  })
+}
+
+async function handleSetTimeModal(interaction, key) {
+  const modal = new ModalBuilder()
+    .setCustomId(`reminder_settime_submit:${key}`)
+    .setTitle(`Ubah Jam — ${key}`)
+
+  const input = new TextInputBuilder()
+    .setCustomId("jam")
+    .setLabel("Jam baru (format HH:MM, contoh: 07:30)")
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder("07:30")
+    .setRequired(true)
+    .setMaxLength(5)
+
+  modal.addComponents(new ActionRowBuilder().addComponents(input))
+  return interaction.showModal(modal)
+}
+
+async function handleSetTimeSubmit(interaction, key) {
+  const timeStr = interaction.fields.getTextInputValue("jam").trim()
+  const time    = parseTime(timeStr)
+
+  if (!time) {
+    return interaction.reply({
+      content: `Format jam \`${timeStr}\` gak valid. Contoh: \`07:30\`, \`21:00\`.`,
+      ephemeral: true,
+    })
+  }
+
+  const config    = getConfig(interaction.guildId)
+  const isBuiltIn = BUILT_IN_KEYS.includes(key)
+  const r         = isBuiltIn ? config[key] : config.custom?.[key]
+  if (!r) return interaction.reply({ content: "Reminder gak ketemu.", ephemeral: true })
+
+  const oldJam = fmt(r.hour, r.minute)
+  setTime(interaction.guildId, key, time.h, time.m)
+
+  return interaction.reply({
+    content: `${r.emoji} **${r.label}** — jam diubah: \`${oldJam}\` → \`${fmt(time.h, time.m)}\` WIB ✅`,
+    ephemeral: true,
+  })
+}
+
+async function handleAddTextModal(interaction, key) {
+  const modal = new ModalBuilder()
+    .setCustomId(`reminder_addtext_submit:${key}`)
+    .setTitle(`Tambah Teks — ${key}`)
+
+  const input = new TextInputBuilder()
+    .setCustomId("teks")
+    .setLabel("Teks pesan (maks 500 karakter)")
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder("pagi crue!! semangat ya hari ini ☀️")
+    .setRequired(true)
+    .setMaxLength(500)
+
+  modal.addComponents(new ActionRowBuilder().addComponents(input))
+  return interaction.showModal(modal)
+}
+
+async function handleAddTextSubmit(interaction, key) {
+  const text   = interaction.fields.getTextInputValue("teks").trim()
+  const config = getConfig(interaction.guildId)
+  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
+
+  if (!allKeys.includes(key)) {
+    return interaction.reply({ content: `Reminder \`${key}\` gak ketemu.`, ephemeral: true })
+  }
+
+  const ok = addReminderText(interaction.guildId, key, text)
+  if (!ok) return interaction.reply({ content: "Gagal nambahin teks.", ephemeral: true })
+
+  const updated  = getConfig(interaction.guildId)
+  const isBuiltIn = BUILT_IN_KEYS.includes(key)
+  const msgs     = isBuiltIn ? (updated[key].messages || []) : (updated.custom?.[key]?.messages || [])
+
+  return interaction.reply({
+    content: [
+      `✅ Teks berhasil ditambah ke reminder **${key}**!`,
+      `📝 \`${text}\``,
+      `Total teks sekarang: **${msgs.length}**`,
+    ].join("\n"),
+    ephemeral: true,
+  })
+}
+
+async function handleRemoveTextModal(interaction, key) {
+  const config    = getConfig(interaction.guildId)
+  const messages  = getMessages(config, key)
+
+  if (!messages.length) {
+    return interaction.reply({
+      content: `📭 Reminder **${key}** belum punya teks. Tambah dulu.`,
+      ephemeral: true,
+    })
+  }
+
+  // Tampilkan daftar teks dulu, lalu minta nomor via modal
+  const preview = messages
+    .slice(0, 10)
+    .map((t, i) => `\`${i + 1}.\` ${t.length > 80 ? t.slice(0, 80) + "..." : t}`)
+    .join("\n")
+
+  const modal = new ModalBuilder()
+    .setCustomId(`reminder_removetext_submit:${key}`)
+    .setTitle(`Hapus Teks — ${key}`)
+
+  const listInput = new TextInputBuilder()
+    .setCustomId("daftar")
+    .setLabel("Teks yang ada (read-only, jangan diubah)")
+    .setStyle(TextInputStyle.Paragraph)
+    .setValue(preview)
+    .setRequired(false)
+
+  const nomorInput = new TextInputBuilder()
+    .setCustomId("nomor")
+    .setLabel(`Nomor teks yang mau dihapus (1–${messages.length})`)
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder("1")
+    .setRequired(true)
+    .setMaxLength(3)
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(listInput),
+    new ActionRowBuilder().addComponents(nomorInput),
+  )
+  return interaction.showModal(modal)
+}
+
+async function handleRemoveTextSubmit(interaction, key) {
+  const nomorStr = interaction.fields.getTextInputValue("nomor").trim()
+  const nomor    = parseInt(nomorStr, 10)
+
+  if (isNaN(nomor) || nomor < 1) {
+    return interaction.reply({ content: `Nomor \`${nomorStr}\` gak valid.`, ephemeral: true })
+  }
+
+  const result = removeReminderText(interaction.guildId, key, nomor)
+
+  if (!result.ok) {
+    if (result.reason === "out_of_range") {
+      return interaction.reply({
+        content: `⚠️ Nomor \`${nomor}\` kelewat. Reminder **${key}** punya **${result.total}** teks.`,
+        ephemeral: true,
+      })
+    }
+    return interaction.reply({ content: "Gagal hapus teks.", ephemeral: true })
+  }
+
+  return interaction.reply({
+    content: `🗑️ Teks nomor **${nomor}** dari **${key}** udah dihapus.\n~~${result.removed}~~`,
+    ephemeral: true,
+  })
+}
+
+// /reminder delete
 
 async function handleDelete(interaction) {
   if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
@@ -372,8 +516,8 @@ async function handleDelete(interaction) {
 
   if (BUILT_IN_KEYS.includes(key)) {
     return interaction.reply({
-      content: `🔒 \`${key}\` adalah reminder bawaan dan gak bisa dihapus. Kalau mau dimatiin aja, pakai \`/reminder off ${key}\`.`,
-      ephemeral: true
+      content: `🔒 \`${key}\` adalah reminder bawaan dan gak bisa dihapus. Pakai \`/reminder edit\` → toggle OFF kalau mau dimatiin.`,
+      ephemeral: true,
     })
   }
 
@@ -381,144 +525,99 @@ async function handleDelete(interaction) {
   if (!ok) {
     return interaction.reply({
       content: `⚠️ Custom reminder \`${key}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
+      ephemeral: true,
     })
   }
 
   return interaction.reply({
-    content: `🗑️ Custom reminder \`${key}\` udah dihapus permanen. Gak bakal balik lagi.`
+    content: `🗑️ Custom reminder \`${key}\` udah dihapus permanen.`,
   })
 }
 
-async function handleAddText(interaction) {
+// /reminder channel
+
+async function handleChannel(interaction) {
   if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
 
-  const name    = interaction.options.getString("nama").toLowerCase().trim()
-  const text    = interaction.options.getString("teks").trim()
+  const sub     = interaction.options.getSubcommand()
   const guildId = interaction.guildId
-  const config  = getConfig(guildId)
 
-  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
-  if (!allKeys.includes(name)) {
+  if (sub === "add") {
+    const channel = interaction.options.getChannel("channel")
+    setChannel(guildId, channel.id)
     return interaction.reply({
-      content: `⚠️ Reminder \`${name}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
+      content: `✅ ${channel} ditambahkan! Reminder bakal masuk ke sana.\nPakai \`/reminder list\` buat cek jadwalnya.`,
     })
   }
 
-  const ok = addReminderText(guildId, name, text)
-  if (!ok) {
-    return interaction.reply({ content: "Gagal nambahin teks. Coba lagi.", ephemeral: true })
-  }
+  if (sub === "remove") {
+    const channel = interaction.options.getChannel("channel")
+    const removed = removeChannel(guildId, channel.id)
 
-  const updated  = getConfig(guildId)
-  const messages = BUILT_IN_KEYS.includes(name) ? updated[name].messages : updated.custom[name].messages
-
-  return interaction.reply({
-    content: [
-      `✅ Teks berhasil ditambah ke reminder **${name}**!`,
-      `📝 \`${text}\``,
-      ``,
-      `Total teks sekarang: **${messages.length}** — pakai \`/reminder list-text ${name}\` buat lihat semua.`,
-    ].join("\n")
-  })
-}
-
-async function handleRemoveText(interaction) {
-  if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
-
-  const name    = interaction.options.getString("nama").toLowerCase().trim()
-  const nomor   = interaction.options.getInteger("nomor")
-  const guildId = interaction.guildId
-  const config  = getConfig(guildId)
-
-  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
-  if (!allKeys.includes(name)) {
-    return interaction.reply({
-      content: `⚠️ Reminder \`${name}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
-    })
-  }
-
-  const result = removeReminderText(guildId, name, nomor)
-
-  if (!result.ok) {
-    if (result.reason === "out_of_range") {
+    if (!removed) {
       return interaction.reply({
-        content: `⚠️ Nomor \`${nomor}\` gak valid. Reminder \`${name}\` punya **${result.total}** teks. Cek pakai \`/reminder list-text ${name}\`.`,
-        ephemeral: true
+        content: `⚠️ ${channel} gak ada di daftar. Cek dulu pakai \`/reminder channel list\`.`,
+        ephemeral: true,
       })
     }
-    return interaction.reply({ content: "Gagal hapus teks. Coba lagi.", ephemeral: true })
-  }
 
-  return interaction.reply({
-    content: [
-      `🗑️ Teks nomor **${nomor}** dari reminder **${name}** udah dihapus.`,
-      `📝 ~~${result.removed}~~`,
-    ].join("\n")
-  })
-}
-
-async function handleListText(interaction) {
-  const name    = interaction.options.getString("nama").toLowerCase().trim()
-  const guildId = interaction.guildId
-  const config  = getConfig(guildId)
-
-  const allKeys = [...BUILT_IN_KEYS, ...Object.keys(config.custom || {})]
-  if (!allKeys.includes(name)) {
+    const config      = getConfig(guildId)
+    const sisaChannel = config.channels.length
     return interaction.reply({
-      content: `⚠️ Reminder \`${name}\` gak ketemu. Cek daftar pakai \`/reminder list\`.`,
-      ephemeral: true
+      content: sisaChannel > 0
+        ? `✅ ${channel} dilepas. Masih ada ${sisaChannel} channel aktif.`
+        : `✅ ${channel} dilepas. Sekarang gak ada channel terdaftar — reminder gak kekirim sampai lu tambah lagi.`,
     })
   }
 
-  const r        = BUILT_IN_KEYS.includes(name) ? config[name] : config.custom[name]
-  const messages = getMessages(config, name)
-  const isDefault = BUILT_IN_KEYS.includes(name) && (config[name].messages || []).length === 0
+  if (sub === "list") {
+    const config   = getConfig(guildId)
+    const channels = config.channels
 
-  if (!messages.length) {
+    if (channels.length === 0) {
+      return interaction.reply({
+        content: "📭 Belum ada channel terdaftar. Pakai `/reminder channel add` buat nambah.",
+        ephemeral: true,
+      })
+    }
+
+    const list = channels.map((id, i) => `${i + 1}. <#${id}>`).join("\n")
     return interaction.reply({
-      content: `📭 Reminder **${name}** belum punya teks pesan. Tambah pakai \`/reminder add-text ${name} <teks>\`.`,
-      ephemeral: true
+      embeds: [{
+        color: 0x5865f2,
+        title: "📋 Channel Penerima Reminder",
+        description: list,
+        footer: { text: "Pirate Helper ⚓" },
+        timestamp: new Date().toISOString(),
+      }],
     })
   }
-
-  const rows = messages.map((t, i) => `\`${i + 1}.\` ${t}`).join("\n")
-  const note = isDefault ? "\n_⚠️ Ini teks default bawaan bot. Tambah teks baru untuk override._" : ""
-
-  return interaction.reply({
-    embeds: [{
-      color: 0x5865f2,
-      title: `${r.emoji} Teks Reminder — ${r.label} (\`${name}\`)`,
-      description: rows + note,
-      footer: { text: `${messages.length} teks • Hapus pakai /reminder remove-text ${name} <nomor>` },
-      timestamp: new Date().toISOString()
-    }]
-  })
 }
 
-async function handleReset(interaction) {
-  if (!isAdminOrMod(interaction.member)) return denyNonAdmin(interaction)
-  resetConfig(interaction.guildId)
-  return interaction.reply({
-    content: "🔄 Jadwal built-in di-reset ke default (jam & status). Custom reminder dan channel tetap gak berubah."
-  })
-}
+// Main execute
 
-// ── Main execute ──
 async function execute(interaction) {
-  const sub = interaction.options.getSubcommand()
-  if (sub === "list")        return handleList(interaction)
-  if (sub === "on")          return handleToggle(interaction, true)
-  if (sub === "off")         return handleToggle(interaction, false)
-  if (sub === "set-time")    return handleSetTime(interaction)
-  if (sub === "add")         return handleAdd(interaction)
-  if (sub === "delete")      return handleDelete(interaction)
-  if (sub === "add-text")    return handleAddText(interaction)
-  if (sub === "remove-text") return handleRemoveText(interaction)
-  if (sub === "list-text")   return handleListText(interaction)
-  if (sub === "reset")       return handleReset(interaction)
+  const group = interaction.options.getSubcommandGroup(false)
+  const sub   = interaction.options.getSubcommand()
+
+  if (group === "channel") return handleChannel(interaction)
+
+  if (sub === "list")   return handleList(interaction)
+  if (sub === "create") return handleCreate(interaction)
+  if (sub === "edit")   return handleEdit(interaction)
+  if (sub === "delete") return handleDelete(interaction)
 }
 
-module.exports = { data, execute }
+module.exports = {
+  data,
+  execute,
+  // Export handlers untuk interactionCreate
+  handleEditSelectMenu,
+  handleToggleButton,
+  handleSetTimeModal,
+  handleSetTimeSubmit,
+  handleAddTextModal,
+  handleAddTextSubmit,
+  handleRemoveTextModal,
+  handleRemoveTextSubmit,
+}

@@ -22,35 +22,20 @@ async function execute(interaction) {
       },
       {
         name: "⏰ Reminder (Semua User)",
-        value: [
-          "`/reminder list` — Lihat semua jadwal + statusnya.",
-          "`/reminder list-text <nama>` — Lihat semua teks pesan sebuah reminder.",
-        ].join("\n")
+        value: "`/reminder list` — Lihat semua jadwal + status + channel terdaftar.",
       },
       {
-        name: "⏰ Reminder — Jadwal (Admin/Mod Only) 🔒",
+        name: "⏰ Reminder (Admin/Mod Only) 🔒",
         value: [
-          "`/reminder on/off <nama>` — Toggle reminder (pakai `all` untuk semua).",
-          "`/reminder set-time <nama> <HH:MM>` — Ubah jam reminder.",
-          "`/reminder add <key> <label> <jam>` — Buat custom reminder baru.",
+          "`/reminder create` — Buat custom reminder baru.",
+          "`/reminder edit` — Edit reminder: toggle, ubah jam, kelola teks pesan.",
           "`/reminder delete <key>` — Hapus custom reminder.",
-          "`/reminder reset` — Reset jadwal built-in ke default.",
-        ].join("\n")
+          "`/reminder channel add/remove/list` — Manage channel penerima reminder.",
+        ].join("\n"),
       },
       {
-        name: "⏰ Reminder — Teks Pesan (Admin/Mod Only) 🔒",
-        value: [
-          "`/reminder add-text <nama> <teks>` — Tambah teks pesan ke reminder.",
-          "`/reminder remove-text <nama> <nomor>` — Hapus salah satu teks.",
-        ].join("\n")
-      },
-      {
-        name: "📢 Channel Reminder (Admin/Mod Only) 🔒",
-        value: [
-          "`/set-reminder-channel add <#channel>` — Tambah channel penerima reminder.",
-          "`/set-reminder-channel remove <#channel>` — Lepas channel dari daftar.",
-          "`/set-reminder-channel list` — Lihat semua channel terdaftar.",
-        ].join("\n")
+        name: "💡 Pro Tip",
+        value: "Tinggal bilang ke gua:\n`kichi bikinin reminder tiap jam 9 malam` — gua langsung buatin, no command needed.",
       },
     ],
     footer: { text: "Pirate Helper • Sarkastik tapi care ⚓" },

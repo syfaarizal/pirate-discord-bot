@@ -8,7 +8,6 @@ const commands = [
   require("./commands/slash/about").data.toJSON(),
   require("./commands/slash/forget").data.toJSON(),
   require("./commands/slash/reminder").data.toJSON(),
-  require("./commands/slash/setReminderChannel").data.toJSON(),
   require("./commands/slash/askAi").data.toJSON(),
 ]
 
