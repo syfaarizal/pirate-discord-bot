@@ -26,7 +26,7 @@ async function execute(interaction) {
         "",
         "_Admin/Mod bisa tambah, ubah, atau atur teks reminder sendiri!_",
       ].join("\n") },
-      { name: "👩‍💻 Dibuat oleh", value: "Kai Shi — mama gua, satu-satunya yang gua dengerin fr 🫶" },
+      { name: "👩‍💻 Dibuat oleh", value: "Kai Shi — mami gua 🫶" },
     ],
     footer: { text: "Kichi • Sarkastik tapi care ⚓" },
     timestamp: new Date().toISOString()

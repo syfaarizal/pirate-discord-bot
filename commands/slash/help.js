@@ -33,10 +33,6 @@ async function execute(interaction) {
           "`/reminder channel add/remove/list` — Manage channel penerima reminder.",
         ].join("\n"),
       },
-      {
-        name: "💡 Pro Tip",
-        value: "Tinggal bilang ke gua:\n`kichi bikinin reminder tiap jam 9 malam` — gua langsung buatin, no command needed.",
-      },
     ],
     footer: { text: "Pirate Helper • Sarkastik tapi care ⚓" },
     timestamp: new Date().toISOString()

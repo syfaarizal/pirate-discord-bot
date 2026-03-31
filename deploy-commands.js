@@ -14,20 +14,13 @@ const commands = [
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN)
 
 async function deploy() {
-  const guildId = process.env.GUILD_ID
-
   try {
     console.log(`\n🚀 Deploying ${commands.length} slash command(s)...`)
     commands.forEach(c => console.log(`   /${c.name}`))
     console.log("")
 
-    if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId), { body: commands })
-      console.log(`✅ Deployed ke guild ${guildId} (aktif instan)`)
-    } else {
-      await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
-      console.log("✅ Deployed global (aktif ~1 jam)")
-    }
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
+    console.log("✅ Deployed global (aktif ~1 jam)")
   } catch (err) {
     console.error("❌ Deploy gagal:", err)
   }
