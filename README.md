@@ -1,38 +1,46 @@
 # ⚓ Pirate Helper — Discord Bot
 
-Bot Discord sarkastik, friendly, bertenaga AI — dengan jadwal otomatis Ramadhan dan memory per user.
+A sarcastic, Gen Z AI companion for your Discord server — with per-user memory, auto reminders, and a personality that actually slaps.
 
 ---
 
-## 📁 Struktur Proyek
+## 📁 Project Structure
 
 ```
 pirate-discord-bot/
 │
 ├── commands/
-│   ├── index.js      → Command router
-│   ├── help.js       → Command: @bot help
-│   ├── ping.js       → Command: @bot ping
-│   ├── about.js      → Command: @bot about
-│   └── forget.js     → Command: @bot forget
+│   └── slash/
+│       ├── help.js           → /help
+│       ├── ping.js           → /ping
+│       ├── about.js          → /about
+│       ├── forget.js         → /forget
+│       ├── reminder.js       → /reminder (create, edit, delete, channel)
+│       └── askAi.js          → /ask-ai + AI intent parsing
 │
 ├── events/
-│   ├── ready.js      → Event: bot online
-│   └── messageCreate.js → Event: pesan masuk + AI handler
+│   ├── ready.js              → Bot online, cron init
+│   └── interactionCreate.js  → Slash commands, buttons, modals, select menus
 │
 ├── utils/
-│   ├── memory.js     → Memory per user (history chat + profil)
-│   ├── cooldown.js   → Anti-spam cooldown per user
-│   ├── typing.js     → Natural typing delay
-│   ├── broadcast.js  → Broadcast ke semua channel
-│   └── prompt.js     → System prompt kepribadian AI
+│   ├── memory.js             → Per-user chat history + profiles
+│   ├── cooldown.js           → Anti-spam cooldown per user
+│   ├── typing.js             → Natural typing delay simulation
+│   ├── broadcast.js          → Broadcast to registered channels
+│   ├── prompt.js             → AI system prompt / personality
+│   └── reminderConfig.js     → Reminder config read/write (per guild)
 │
 ├── cron/
-│   └── scheduler.js  → Semua jadwal pesan otomatis
+│   └── scheduler.js          → Cron jobs for auto reminders
 │
-├── .env.example      → Template environment variables
+├── data/
+│   └── reminders.json        → Auto-generated, stores per-guild reminder config
+│
+├── reset-commands.js         → Wipe all registered Discord commands
+├── deploy-commands.js        → Register slash commands to Discord
+├── .env.example              → Environment variable template
 ├── package.json
-└── index.js          → Entry point
+└── index.js                  → Entry point
 ```
 
 ---
@@ -44,59 +52,87 @@ pirate-discord-bot/
 npm install
 ```
 
-### 2. Buat file `.env`
+### 2. Create `.env` file
 ```bash
 cp .env.example .env
 ```
-Isi dengan token dan API key kamu.
 
-### 3. Jalankan bot
+Fill in your credentials:
+
+| Variable | Description |
+|---|---|
+| `TOKEN` | Discord bot token from Developer Portal |
+| `CLIENT_ID` | Your bot's application ID |
+| `AI_KEY` | API key from OpenRouter |
+
+### 3. Deploy slash commands
+```bash
+node deploy-commands.js
+```
+
+Commands are deployed globally — takes ~1 hour to propagate to all servers.
+
+### 4. Run the bot
 ```bash
 # Production
 npm start
 
-# Development (auto-restart)
+# Dev (auto-restart)
 npm run dev
 ```
 
 ---
 
-## 🤖 Fitur
+## 🤖 Features
 
-### Commands
-| Command | Fungsi |
-|---|---|
-| `@bot help` | Nampilin semua command |
-| `@bot ping` | Cek latency bot |
-| `@bot about` | Info tentang bot |
-| `@bot forget` | Reset memory percakapan |
-| `@bot <pesan>` | Ngobrol sama AI |
+### Slash Commands
+
+| Command | Who | Description |
+|---|---|---|
+| `/help` | Everyone | Show all commands |
+| `/ping` | Everyone | Check bot latency |
+| `/about` | Everyone | Info about Kichi |
+| `/forget` | Everyone | Reset your chat memory |
+| `/ask-ai` | Everyone | Chat with Kichi |
+| `/reminder list` | Everyone | View all schedules + status |
+| `/reminder create` | Admin/Mod | Create a new custom reminder |
+| `/reminder edit` | Admin/Mod | Edit reminder via interactive UI |
+| `/reminder delete` | Admin/Mod | Delete a custom reminder |
+| `/reminder channel add/remove/list` | Admin/Mod | Manage which channels get reminders |
 
 ### AI Features
-- **Memory per user** — bot ingat 20 pesan terakhir per orang
-- **Personalisasi** — bot sebut nama user, tau ini percakapan ke berapa
-- **Natural typing delay** — delay dihitung dari panjang respons
-- **Anti-spam cooldown** — 5 detik cooldown per user
-- **Sarkastik tapi friendly** — karakter Gen Z yang asik
+- **Per-user memory** — remembers up to 20 messages per person
+- **Personalization** — knows your name, how many times you've talked, first seen date
+- **Anti-spam cooldown** — 5 seconds between requests per user
+- **Natural typing delay** — delay scales with response length
 
-### Jadwal Otomatis (WIB)
-| Jam | Event |
-|---|---|
-| 03:30 | 🌙 Sahur |
-| 04:45 | 😴 Habis Subuh |
-| 07:00 | 🌞 Pagi |
-| 12:00 | 😴 Siang |
-| 16:30 | 🌤 Ngabuburit |
-| 18:00 | 🌇 Buka Puasa |
-| 21:00 | 🌙 Malam |
-| 23:30 | 😴 Tidur |
+### Reminder System
+- 3 built-in reminders: **Pagi** (07:00), **Siang** (12:00), **Malam** (21:00)
+- Fully customizable per guild — time, messages, toggle on/off
+- Custom reminders via `/reminder create`
+- Interactive edit UI: select menu → action buttons → modal form
+- Messages are randomized from a pool each time
 
 ---
 
-## ⚙️ Environment Variables
+## 🔧 Deploying / Resetting Commands
 
-| Variable | Keterangan |
-|---|---|
-| `TOKEN` | Discord bot token dari Developer Portal |
-| `AI_KEY` | API key dari OpenRouter |
-| `CHANNEL_IDS` | Channel IDs untuk broadcast, pisah koma |
+If commands look broken or outdated on Discord, wipe and redeploy:
+
+```bash
+node reset-commands.js    # clears all registered commands from Discord
+node deploy-commands.js   # pushes the new command list
+```
+
+Then restart the bot:
+```bash
+pm2 restart pirate-bot
+```
+
+> Global commands take up to 1 hour to fully propagate. Guild-specific deployment is instant — see `deploy-commands.js` if you want to switch modes.
+
+---
+
+## 🏴‍☠️ About Kichi
+
+Her full name is Pirate Helper. People call her Kichi. She's your server's sarcastic, Gen Z bestie — not an assistant, not a bot, a *friend*. Built by Kai Shi.
