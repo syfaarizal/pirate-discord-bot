@@ -5,7 +5,7 @@ const CONFIG_PATH = path.join(__dirname, "../data/reminders.json")
 
 // ── Reminder bawaan (tidak bisa dihapus, tapi bisa diubah jam/teks/status) ──
 const REMINDER_DEFAULTS = {
-  pagi:  { enabled: true, hour: 7,  minute: 0,  label: "Pagi",  emoji: "🌞", builtIn: true },
+  pagi:  { enabled: true, hour: 7,  minute: 0,  label: "Pagi",  emoji: "🌅", builtIn: true },
   siang: { enabled: true, hour: 12, minute: 0,  label: "Siang", emoji: "☀️", builtIn: true },
   malam: { enabled: true, hour: 21, minute: 0,  label: "Malam", emoji: "🌙", builtIn: true },
 }
@@ -13,63 +13,59 @@ const REMINDER_DEFAULTS = {
 const BUILT_IN_KEYS   = Object.keys(REMINDER_DEFAULTS)
 const VALID_REMINDERS = BUILT_IN_KEYS
 
-// Default messages untuk built-in reminders
-// Format quote pakai > biar keliatan kayak blockquote di Discord
+// ── Default messages ──
+// Tone: pendek, hadir, gak maksa. Kebaca sekali lewat.
 const DEFAULT_MESSAGES = {
   pagi: [
-    "pagi crue!! semangat ya hari ini, atau minimal pura-pura semangat dulu ☀️",
-    "morning!! vibes hari ini harus bagus, no excuse 🌞",
-    "selamat pagi~ jangan lupa sarapan, jangan skip 🫡",
-    "rise and shine bestie. hari ini bakal slay, fr fr ☀️",
-    "pagi pagi~ semoga harinya gak berat-berat amat ya, fighting!! 🌤",
-    "gm! jangan lupa sarapan yeuuw, biar ga lemes 🍳",
-    "morning eperibadeh!! selamat menjalani aktivitas, jangan lupa istirahat juga ya~ 🌻",
-    "good morning!! jangan lupa senyum, walaupun cuma buat diri sendiri 😊",
-    "ehm pagi. moga harinya ga berat-berat amat ya, kita jalanin aja dulu, one step at a time 🐾",
-    "pagi~ yah, hari ini masih jomblo aja, tapi semoga harinya gak sepi-sepi amat ya wkwk 💀",
-    "aduh, kasian gaada yang ngucapin, jadi gua aja yang ngucapin — selamat pagi!! semoga harinya menyenangkan, atau setidaknya ga terlalu nyebelin wkwkwk 🌞",
-    "> \"The secret of getting ahead is getting started.\" — Mark Twain\npagi crue, yuk mulai hari ini pelan-pelan~ 🌤",
-    "> \"You don't have to be great to start, but you have to start to be great.\" — Zig Ziglar\nselamat pagi!! hari ini bisa, fr 💪",
-    "> \"Every morning is a chance at a new day.\" — Marjorie Pay Hinckley\ngm gm~ semoga hari ini lebih baik dari kemarin ya ✨",
-    "> \"Morning is an important time of day, because how you spend your morning can often tell you what kind of day you are going to have.\" — Lemony Snicket\npagi bestie, awali harinya dengan baik ya~ 🌻",
-    "> \"Rise up, start fresh, see the bright opportunity in each new day.\" — Unknown\nayo bangkit, hari baru nih!! jangan males-malesan mulu 😤☀️",
-    "> \"Each morning we are born again. What we do today is what matters most.\" — Buddha\npagi~ inget, hari ini fresh start. gaskeun 🔥",
-    "> \"An early-morning walk is a blessing for the whole day.\" — Henry David Thoreau\nselamat pagi crue!! semoga harinya penuh hal-hal baik 🌿",
+    "pagi~ pelan aja, yang penting mulai ☀️",
+    "hari baru, versi lo yang baru juga",
+    "gak harus sempurna, cukup jalan dulu",
+    "tarik napas… gas pelan-pelan",
+    "start kecil hari ini > nunggu perfect",
+    "bangun, hidup masih nunggu lo jalanin",
+    "gak usah ngebut, asal gak berhenti",
+    "hari ini fresh start, jangan dibawa berat kemarin",
+    "lo gak telat, lo lagi di timing lo sendiri",
+    "ayo mulai, walau dikit",
+    "good morning~ semoga ringan ya harinya",
+    "fokus ke langkah pertama aja",
+    "hidup gak lomba, santai tapi jalan",
+    "satu progress kecil hari ini udah cukup",
+    "mata udah kebuka, berarti ada kesempatan lagi",
   ],
   siang: [
-    "siang crue!! udah makan belum? jangan skip makan siang, penting 🍱",
-    "hei, istirahat dulu gapapa lho. otak juga butuh jeda~ ☕",
-    "siang siang~ gimana pagi tadi? semoga lancar ya, lanjut semangat 💪",
-    "lunch time!! tinggalin kerjaan sebentar, makan dulu yang bener 🍜",
-    "oi, udah siang nih. kalau belum makan, makan dulu. jangan nunda-nunda 😤",
-    "siang bestie~ jangan lupa minum air putih juga ya, bukan cuma kopi doang 💧",
-    "recharge dulu~ makan siang yang cukup biar sore nya masih ada tenaga 🔋",
-    "> \"Almost everything will work again if you unplug it for a few minutes, including you.\" — Anne Lamott\nsiang~ ambil napas dulu, istirahat sebentar gapapa ☕",
-    "> \"Take care of your body. It's the only place you have to live.\" — Jim Rohn\nhei, udah makan? jangan lupa jaga badan ya, bukan cuma produktivitas doang 🍱",
-    "> \"Nourishing yourself in a way that helps you blossom in the direction you want to go is attainable, and you are worth the effort.\" — Deborah Day\nmakan siang yuk~ tubuh lu butuh bahan bakar buat lanjut hari ini 🌻",
-    "> \"You owe yourself the love that you so freely give to other people.\" — Unknown\nsiang crue~ jangan lupa treat yourself, minimal makan yang enak dikit 😌",
-    "> \"Rest when you're weary. Refresh and renew yourself, your body, your mind, your spirit.\" — Ralph Marston\nistirahat dulu sebentar ya~ produktif itu butuh jeda juga 💤",
-    "> \"Eat well, travel often.\" — Unknown\nkalo belum makan, makan dulu. dunia bisa nunggu, perut enggak 💀🍜",
+    "udah makan belum? isi bensin dulu 😌",
+    "jangan lupa minum, otak juga butuh cairan",
+    "kalau capek, istirahat bentar gapapa",
+    "hidup gak harus kejar-kejaran terus",
+    "rehat sebentar bukan berarti kalah",
+    "lagi berat? yaudah, jalan pelan aja",
+    "jangan lupa, lo juga manusia",
+    "santai bentar, dunia gak lari kok",
+    "hari belum selesai, masih bisa dibenerin",
+    "kalau overthinking, tarik napas dulu",
+    "kerja penting, tapi diri lo juga",
+    "jangan lupa makan yang enak dikit 😌",
+    "pause sebentar, reset dikit",
+    "capek itu valid, tapi jangan nyerah",
+    "lo udah sejauh ini, lanjut dikit lagi",
   ],
   malam: [
-    "malem crue~ udah waktunya istirahat, jangan begadang mulu 🌙",
-    "good night bestie!! besok masih ada hari baru, gak usah overthink 💤",
-    "oke udah malem, yuk bobo. jangan yapping sampe subuh 😭🛌",
-    "malam~ semoga istirahatnya enak dan mimpinya bagus fr 🌙",
-    "gnight!! healing dulu, besok lanjut lagi 💤",
-    "malem eperibadeh!! waktunya recharge, jangan lupa tidur yang cukup ya~ 🌙",
-    "good night!! jangan lupa senyum sebelum tidur, biar mimpinya juga manis wkwk 😊",
-    "ehm malam. hari ini mungkin berat, tapi besok masih ada kesempatan buat coba lagi 🌙",
-    "hoamm~ udah malem nih. tidur gak sih lu? jangan yapping mulu 😴",
-    "gn ngab, tidor ga lu? udah malem, jangan begadang mulu, besok masih ada hari baru 🌙",
-    "gnight kesayangan~ semoga istirahatnya enak dan mimpinya bagus 💤",
-    "> \"Sleep is the best meditation.\" — Dalai Lama\nmalem~ udah waktunya istirahat beneran, bukan scroll-scroll doang 😴",
-    "> \"A good laugh and a long sleep are the best cures in the doctor's book.\" — Irish Proverb\ngnight crue!! tidur yang cukup ya, itu investasi buat besok 💤",
-    "> \"Sleep is an investment in the energy you need to be effective tomorrow.\" — Tom Roth\nudah malem, yuk bobo. besok masih ada kerjaan, hari ini cukup 🛌",
-    "> \"The night is the hardest time to be alive and 4am knows all my secrets.\" — Poppy Z. Brite\nei, kalau lagi susah tidur, gapapa. lu gak sendirian. tapi tetep coba istirahat ya 🌙",
-    "> \"Each night, when I go to sleep, I die. And the next morning, when I wake up, I am reborn.\" — Mahatma Gandhi\nmalem~ hari ini udah selesai. besok kita mulai lagi, fresh 🌙✨",
-    "> \"Finish each day and be done with it. You have done what you could.\" — Ralph Waldo Emerson\ngnight bestie~ hari ini udah cukup. istirahat, besok lanjut 💤",
-    "> \"It is a common experience that a problem difficult at night is resolved in the morning after the committee of sleep has worked on it.\" — John Steinbeck\ntidur dulu~ kadang solusi dateng pas bangun tidur, bukan pas begadang 😴",
+    "malam… waktunya pelan-pelan berhenti 🌙",
+    "hari ini cukup. gak harus sempurna",
+    "istirahat dulu, besok lanjut lagi",
+    "gak semua harus diselesaiin hari ini",
+    "tidur dulu, biar pikiran ikut tenang",
+    "lo udah berusaha hari ini, itu cukup",
+    "kalau berat, taruh dulu… besok diambil lagi",
+    "dunia bisa nunggu, tidur dulu 😴",
+    "kadang jawaban datang setelah istirahat",
+    "pelan-pelan lepasin yang bikin penuh",
+    "besok masih ada kesempatan",
+    "malam ini, izinin diri lo tenang",
+    "gak apa-apa kalau hari ini gak maksimal",
+    "tutup hari dengan tenang, bukan penyesalan",
+    "good night~ semoga tidur lo nyenyak ✨",
   ],
 }
 
@@ -158,7 +154,7 @@ function removeChannel(guildId, channelId) {
   return true
 }
 
-// ── Enable / disable (built-in & custom) ──
+// ── Enable / disable ──
 function setEnabled(guildId, key, enabled) {
   const all = loadAll()
   if (!all[guildId]) all[guildId] = {}
@@ -174,7 +170,7 @@ function setEnabled(guildId, key, enabled) {
   return true
 }
 
-// ── Set time (built-in & custom) ──
+// ── Set time ──
 function setTime(guildId, key, hour, minute) {
   const all = loadAll()
   if (!all[guildId]) all[guildId] = {}
@@ -276,10 +272,10 @@ function resetMessages(guildId, key) {
 }
 
 function resetConfig(guildId) {
-  const all = loadAll()
+  const all      = loadAll()
   const channels = all[guildId]?.channels || []
   const custom   = all[guildId]?.custom   || {}
-  all[guildId] = { channels, custom }
+  all[guildId]   = { channels, custom }
   saveAll(all)
 }
 
