@@ -5,19 +5,15 @@ const { getAllConfigs, getMessages, BUILT_IN_KEYS } = require("../utils/reminder
 const timezone = "Asia/Jakarta"
 
 const STARTUP_MESSAGES = [
-  "Kichi udah aktif lagi cuy, semua sistem jalan fr ⚓",
   "abis restart, gua balik. kayak bad penny aja wkwk 🏴‍☠️",
 ]
 
-async function sendToChannels(client, channels, message, { everyone = true } = {}) {
+async function sendToChannels(client, channels, message) {
   for (const channelId of channels) {
     try {
       const channel = await client.channels.fetch(channelId)
       if (!channel) continue
-      await channel.send({
-        content: everyone ? `@everyone ${message}` : message,
-        allowedMentions: everyone ? { parse: ["everyone"] } : { parse: [] }
-      })
+      await channel.send({ content: message })
     } catch (err) {
       console.error(`⚠️ Gagal kirim ke channel ${channelId}:`, err.message)
     }
@@ -31,13 +27,13 @@ async function broadcastStartup(client) {
 
   for (const [guildId, config] of Object.entries(configs)) {
     if (!config.channels?.length) continue
-    await sendToChannels(client, config.channels, message, { everyone: false })
+    await sendToChannels(client, config.channels, message)
     totalSent += config.channels.length
     console.log(`📣 [Startup] Notif dikirim → guild ${guildId}`)
   }
 
   if (totalSent === 0) {
-    console.log("⚠️ [Startup] Gak ada channel yang di-set. Jalanin /set-reminder-channel add dulu!")
+    console.log("⚠️ [Startup] Gak ada channel yang di-set. Jalanin /reminder channel add dulu!")
   }
 }
 
@@ -47,15 +43,15 @@ function registerCronJobs(client) {
   broadcastStartup(client)
 
   cron.schedule("* * * * *", async () => {
-    const now     = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
-    const hour    = now.getHours()
-    const minute  = now.getMinutes()
+    const now    = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }))
+    const hour   = now.getHours()
+    const minute = now.getMinutes()
     const configs = getAllConfigs()
 
     for (const [guildId, config] of Object.entries(configs)) {
       if (!config.channels?.length) continue
 
-      // ── Built-in reminders (pagi, siang, malam + future built-ins) ──
+      // ── Built-in reminders ──
       for (const key of BUILT_IN_KEYS) {
         const reminder = config[key]
         if (!reminder?.enabled) continue
@@ -65,7 +61,7 @@ function registerCronJobs(client) {
         if (!messages.length) continue
 
         const message = randomPick(messages)
-        await sendToChannels(client, config.channels, message, { everyone: true })
+        await sendToChannels(client, config.channels, message)
         console.log(`📣 [Cron] ${reminder.label} → guild ${guildId} @ ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)
       }
 
@@ -78,7 +74,7 @@ function registerCronJobs(client) {
         if (!messages.length) continue
 
         const message = randomPick(messages)
-        await sendToChannels(client, config.channels, message, { everyone: true })
+        await sendToChannels(client, config.channels, message)
         console.log(`📣 [Cron:custom] ${reminder.label} → guild ${guildId} @ ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)
       }
     }
