@@ -1,6 +1,7 @@
 require("dotenv").config()
 
 const { REST, Routes } = require("discord.js")
+const { joinData, leaveData } = require("./commands/slash/join")
 
 const commands = [
   require("./commands/slash/help").data.toJSON(),
@@ -9,6 +10,8 @@ const commands = [
   require("./commands/slash/forget").data.toJSON(),
   require("./commands/slash/reminder").data.toJSON(),
   require("./commands/slash/askAi").data.toJSON(),
+  joinData.toJSON(),
+  leaveData.toJSON(),
 ]
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN)

@@ -9,6 +9,8 @@ const {
   handleRemoveTextSubmit,
 } = require("../commands/slash/reminder")
 
+const { executeJoin, executeLeave } = require("../commands/slash/join")
+
 const commandModules = {
   "help":     () => require("../commands/slash/help"),
   "ping":     () => require("../commands/slash/ping"),
@@ -16,9 +18,9 @@ const commandModules = {
   "forget":   () => require("../commands/slash/forget"),
   "reminder": () => require("../commands/slash/reminder"),
   "ask-ai":   () => require("../commands/slash/askAi"),
+  "join":     () => ({ execute: executeJoin }),
+  "leave":    () => ({ execute: executeLeave }),
 }
-
-// Guard: pastiin user adalah admin/mod
 
 const { PermissionFlagsBits } = require("discord.js")
 
@@ -41,8 +43,6 @@ function denyNonAdmin(interaction) {
     ephemeral: true,
   })
 }
-
-// Router
 
 async function onInteractionCreate(interaction) {
 
