@@ -22,8 +22,17 @@ async function deploy() {
     commands.forEach(c => console.log(`   /${c.name}`))
     console.log("")
 
-    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
-    console.log("✅ Deployed global (aktif ~1 jam)")
+    const hasGuildId = Boolean(process.env.GUILD_ID)
+    const route = hasGuildId
+      ? Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
+      : Routes.applicationCommands(process.env.CLIENT_ID)
+
+    await rest.put(route, { body: commands })
+    console.log(
+      hasGuildId
+        ? `✅ Deployed to guild ${process.env.GUILD_ID} (biasanya langsung muncul)`
+        : "✅ Deployed global (aktif ~1 jam)"
+    )
   } catch (err) {
     console.error("❌ Deploy gagal:", err)
   }
