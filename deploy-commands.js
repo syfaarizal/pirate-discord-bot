@@ -22,17 +22,32 @@ async function deploy() {
     commands.forEach(c => console.log(`   /${c.name}`))
     console.log("")
 
-    const hasGuildId = Boolean(process.env.GUILD_ID)
-    const route = hasGuildId
-      ? Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
-      : Routes.applicationCommands(process.env.CLIENT_ID)
+    const guildIds = (process.env.GUILD_IDS || "")
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean)
 
-    await rest.put(route, { body: commands })
-    console.log(
-      hasGuildId
-        ? `✅ Deployed to guild ${process.env.GUILD_ID} (biasanya langsung muncul)`
-        : "✅ Deployed global (aktif ~1 jam)"
-    )
+    const singleGuildId = process.env.GUILD_ID?.trim()
+    if (singleGuildId && !guildIds.includes(singleGuildId)) {
+      guildIds.push(singleGuildId)
+    }
+
+    if (guildIds.length > 0) {
+      for (const guildId of guildIds) {
+        await rest.put(
+          Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
+          { body: commands }
+        )
+        console.log(`✅ Deployed to guild ${guildId} (biasanya langsung muncul)`)
+      }
+    } else {
+      await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
+      console.log("✅ Deployed global (aktif ~1 jam)")
+    }
+
+    if (!process.env.GUILD_ID && !process.env.GUILD_IDS && process.env.CHANNEL_IDS) {
+      console.log("ℹ️  CHANNEL_IDS terdeteksi, tapi deploy slash command butuh GUILD_ID (ID server), bukan ID channel.")
+    }
   } catch (err) {
     console.error("❌ Deploy gagal:", err)
   }
