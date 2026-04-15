@@ -1,10 +1,11 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js")
 const { joinVoiceChannel, getVoiceConnection } = require("@discordjs/voice")
+const { setCaller, getCaller, clearCaller, cancelPendingLeave } = require("../../utils/vcState")
 
 // ── /join ──
 const joinData = new SlashCommandBuilder()
   .setName("join")
-  .setDescription("Panggil Kichi ke voice channel lo sekarang")
+  .setDescription("Panggil Kichi ke voice channel sekarang")
 
 // ── /leave ──
 const leaveData = new SlashCommandBuilder()
@@ -18,12 +19,13 @@ const leaveData = new SlashCommandBuilder()
 async function executeJoin(interaction) {
   const member  = interaction.member
   const guildId = interaction.guildId
+  const userId  = interaction.user.id
 
   // 1. User harus udah di VC
   const userVC = member.voice?.channel
   if (!userVC) {
     return interaction.reply({
-      content: "join voice dulu baru panggil gua 😐",
+      content: "join voice dulu baru panggil gua napa bang 😐",
       ephemeral: true,
     })
   }
@@ -45,20 +47,23 @@ async function executeJoin(interaction) {
     // Udah di VC yang sama
     if (botChannelId === userVC.id) {
       return interaction.reply({
-        content: `gua udah di ${userVC} dari tadi 😑`,
+        content: `gua udah di ${userVC} dari tadi kocak 😑`,
         ephemeral: true,
       })
     }
 
-    // Di VC yang beda — tolak, harus /leave dulu atau pindah ke VC bot
+    // Di VC yang beda — tolak
     const botChannel = interaction.guild.channels.cache.get(botChannelId)
     return interaction.reply({
-      content: `gua lagi di ${botChannel ?? "VC lain"} nih. \`/leave\` dulu atau masuk ke sana baru panggil lagi.`,
+      content: `gua lagi di ${botChannel ?? "VC lain"} nih.`,
       ephemeral: true,
     })
   }
 
-  // 4. Join
+  // 4. Cancel pending leave kalau ada (user manggil lagi sebelum timer habis)
+  cancelPendingLeave(guildId)
+
+  // 5. Join & simpan siapa yang manggil
   try {
     joinVoiceChannel({
       channelId:      userVC.id,
@@ -67,6 +72,8 @@ async function executeJoin(interaction) {
       selfDeaf:       true,
       selfMute:       false,
     })
+
+    setCaller(guildId, userId)
 
     return interaction.reply({
       content: `oke, gua di ${userVC} 👋`,
@@ -85,18 +92,46 @@ async function executeJoin(interaction) {
 // ─────────────────────────────────────────────
 
 async function executeLeave(interaction) {
-  const connection = getVoiceConnection(interaction.guildId)
+  const guildId  = interaction.guildId
+  const userId   = interaction.user.id
+  const member   = interaction.member
+  const callerId = getCaller(guildId)
 
+  const connection = getVoiceConnection(guildId)
   if (!connection) {
     return interaction.reply({
-      content: "gua lagi gak di VC mana-mana.",
+      content: "gua lagi gak di VC mana-mana sih...",
       ephemeral: true,
     })
   }
 
+  // Cek permission: hanya caller atau admin/mod yang bisa /leave
+  const isAdminOrMod = member && (
+    member.guild.ownerId === userId ||
+    member.permissions.has(PermissionFlagsBits.Administrator) ||
+    member.permissions.has(PermissionFlagsBits.ManageGuild) ||
+    member.roles.cache.some(r => {
+      const n = r.name.toLowerCase()
+      return n.includes("admin") || n.includes("mod")
+    })
+  )
+  const isCaller = callerId === userId
+
+  if (!isCaller && !isAdminOrMod) {
+    return interaction.reply({
+      content: "eits, yang bisa nyuruh gua pergi itu yang manggil gua, atau admin/mod. bukan lu 😐",
+      ephemeral: true,
+    })
+  }
+
+  // Cancel pending leave timer kalau ada
+  cancelPendingLeave(guildId)
+
   connection.destroy()
+  clearCaller(guildId)
+
   return interaction.reply({
-    content: "oke gua cabut 👋",
+    content: "oke gua cabut dulu, bye",
   })
 }
 
