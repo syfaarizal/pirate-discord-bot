@@ -3,6 +3,7 @@ const { randomPick } = require("../utils/broadcast")
 const { getAllConfigs, getMessages, BUILT_IN_KEYS } = require("../utils/reminderConfig")
 
 const timezone = "Asia/Jakarta"
+const STARTUP_CHANNEL_ID = process.env.STARTUP_CHANNEL_ID?.trim()
 
 const STARTUP_MESSAGES = [
   "abis restart, gua balik. kayak bad penny aja wkwk 🏴‍☠️",
@@ -21,19 +22,23 @@ async function sendToChannels(client, channels, message) {
 }
 
 async function broadcastStartup(client) {
-  const configs = getAllConfigs()
   const message = randomPick(STARTUP_MESSAGES)
-  let totalSent = 0
-
-  for (const [guildId, config] of Object.entries(configs)) {
-    if (!config.channels?.length) continue
-    await sendToChannels(client, config.channels, message)
-    totalSent += config.channels.length
-    console.log(`📣 [Startup] Notif dikirim → guild ${guildId}`)
+  if (!STARTUP_CHANNEL_ID) {
+    console.log("ℹ️ [Startup] STARTUP_CHANNEL_ID belum di-set, skip startup notif.")
+    return
   }
 
-  if (totalSent === 0) {
-    console.log("⚠️ [Startup] Gak ada channel yang di-set. Jalanin /reminder channel add dulu!")
+  try {
+    const channel = await client.channels.fetch(STARTUP_CHANNEL_ID)
+    if (!channel) {
+      console.log(`⚠️ [Startup] Channel ${STARTUP_CHANNEL_ID} gak ketemu.`)
+      return
+    }
+
+    await channel.send({ content: message })
+    console.log(`📣 [Startup] Notif dikirim ke channel ${STARTUP_CHANNEL_ID}`)
+  } catch (err) {
+    console.error(`⚠️ [Startup] Gagal kirim ke ${STARTUP_CHANNEL_ID}:`, err.message)
   }
 }
 
