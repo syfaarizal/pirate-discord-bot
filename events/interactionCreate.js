@@ -9,18 +9,8 @@ const {
   handleRemoveTextSubmit,
 } = require("../commands/slash/reminder")
 
-const { executeJoin, executeLeave } = require("../commands/slash/join")
-
-const commandModules = {
-  "help":     () => require("../commands/slash/help"),
-  "ping":     () => require("../commands/slash/ping"),
-  "about":    () => require("../commands/slash/about"),
-  "forget":   () => require("../commands/slash/forget"),
-  "reminder": () => require("../commands/slash/reminder"),
-  "ask-ai":   () => require("../commands/slash/askAi"),
-  "join":     () => ({ execute: executeJoin }),
-  "leave":    () => ({ execute: executeLeave }),
-}
+const { getCommandMap } = require("../commands/slash/registry")
+const commandMap = getCommandMap()
 
 const { PermissionFlagsBits } = require("discord.js")
 
@@ -48,11 +38,10 @@ async function onInteractionCreate(interaction) {
 
   // ── Slash Commands ──
   if (interaction.isChatInputCommand()) {
-    const loader = commandModules[interaction.commandName]
-    if (!loader) return
+    const command = commandMap[interaction.commandName]
+    if (!command?.execute) return
     try {
-      const { execute } = loader()
-      await execute(interaction)
+      await command.execute(interaction)
     } catch (err) {
       console.error(`[Slash Error] /${interaction.commandName}:`, err)
       const msg = "Aduh, ada error nih 💀 Coba lagi bentar ya."

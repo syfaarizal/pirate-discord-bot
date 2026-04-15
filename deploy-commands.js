@@ -1,18 +1,11 @@
 require("dotenv").config()
 
 const { REST, Routes } = require("discord.js")
-const { joinData, leaveData } = require("./commands/slash/join")
+const { slashCommands } = require("./commands/slash/registry")
 
-const commands = [
-  require("./commands/slash/help").data.toJSON(),
-  require("./commands/slash/ping").data.toJSON(),
-  require("./commands/slash/about").data.toJSON(),
-  require("./commands/slash/forget").data.toJSON(),
-  require("./commands/slash/reminder").data.toJSON(),
-  require("./commands/slash/askAi").data.toJSON(),
-  joinData.toJSON(),
-  leaveData.toJSON(),
-]
+const commands = Array.from(
+  new Map(slashCommands.map(cmd => [cmd.name, cmd.data.toJSON()])).values()
+)
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN)
 
@@ -33,6 +26,10 @@ async function deploy() {
     }
 
     if (guildIds.length > 0) {
+      // Prevent duplicate command rows in a guild (global + guild overlap).
+      await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: [] })
+      console.log("🧹 Global commands dibersihin dulu biar gak dobel di server.")
+
       for (const guildId of guildIds) {
         await rest.put(
           Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
@@ -41,6 +38,7 @@ async function deploy() {
         console.log(`✅ Deployed to guild ${guildId} (biasanya langsung muncul)`)
       }
     } else {
+      console.log("ℹ️ Deploy mode: global command only.")
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
       console.log("✅ Deployed global (aktif ~1 jam)")
     }
