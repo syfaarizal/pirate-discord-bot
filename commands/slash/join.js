@@ -1,6 +1,13 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js")
 const { joinVoiceChannel, getVoiceConnection } = require("@discordjs/voice")
-const { setCaller, getCaller, clearCaller, cancelPendingLeave } = require("../../utils/vcState")
+const {
+  setCaller,
+  getCaller,
+  clearCaller,
+  cancelPendingLeave,
+  setNoticeChannel,
+  clearNoticeChannel,
+} = require("../../utils/vcState")
 
 // ── /join ──
 const joinData = new SlashCommandBuilder()
@@ -74,6 +81,7 @@ async function executeJoin(interaction) {
     })
 
     setCaller(guildId, userId)
+    setNoticeChannel(guildId, interaction.channelId)
 
     return interaction.reply({
       content: `oke, gua di ${userVC} 👋`,
@@ -129,6 +137,7 @@ async function executeLeave(interaction) {
 
   connection.destroy()
   clearCaller(guildId)
+  clearNoticeChannel(guildId)
 
   return interaction.reply({
     content: "oke gua cabut dulu, bye",

@@ -2,7 +2,7 @@ const { joinVoiceChannel, getVoiceConnection } = require("@discordjs/voice")
 const {
   getCaller, clearCaller,
   setPendingLeave, cancelPendingLeave, hasPendingLeave,
-  setMoving, clearMoving, isMoving,
+  getNoticeChannel, clearNoticeChannel,
 } = require("../utils/vcState")
 
 // Jeda sebelum auto-leave: random antara 30-60 detik
@@ -11,6 +11,19 @@ const LEAVE_DELAY_MAX = 60 * 1000
 
 function randomDelay() {
   return Math.floor(Math.random() * (LEAVE_DELAY_MAX - LEAVE_DELAY_MIN + 1)) + LEAVE_DELAY_MIN
+}
+
+async function sendLeaveNotice(guild, guildId) {
+  const noticeChannelId = getNoticeChannel(guildId)
+  if (!noticeChannelId) return
+
+  try {
+    const channel = await guild.client.channels.fetch(noticeChannelId)
+    if (!channel || !channel.isTextBased() || channel.isThread()) return
+    await channel.send("udah gak ada siapa-siapa. gua leave ya 👋")
+  } catch {
+    // Channel bisa jadi udah dihapus / bot gak punya akses.
+  }
 }
 
 async function onVoiceStateUpdate(oldState, newState) {
@@ -41,13 +54,9 @@ async function onVoiceStateUpdate(oldState, newState) {
   )
 
   if (callerMoved) {
-    // Guard: kalau lagi dalam proses moving, skip biar gak loop
-    if (isMoving(guildId)) return
-
     const targetChannel = newState.channel
     if (!targetChannel) return
 
-    setMoving(guildId)
     try {
       joinVoiceChannel({
         channelId:      targetChannel.id,
@@ -56,12 +65,10 @@ async function onVoiceStateUpdate(oldState, newState) {
         selfDeaf:       true,
         selfMute:       false,
       })
+      cancelPendingLeave(guildId)
       console.log(`🔀 [VC] Follow caller ke ${targetChannel.name} (${guildId})`)
     } catch (err) {
       console.error("[VC Follow Error]", err)
-    } finally {
-      // Clear flag setelah delay singkat — cukup buat Discord selesai proses event
-      setTimeout(() => clearMoving(guildId), 2000)
     }
     return
   }
@@ -94,22 +101,11 @@ async function onVoiceStateUpdate(oldState, newState) {
         return
       }
 
-      // Kirim pesan ke text channel (ambil channel teks pertama yang bisa ditulis)
-      try {
-        const textChannel = guild.channels.cache.find(ch =>
-          ch.isTextBased() &&
-          !ch.isThread() &&
-          ch.permissionsFor(guild.members.me)?.has("SendMessages")
-        )
-        if (textChannel) {
-          await textChannel.send("udah gak ada siapa-siapa. gua leave ya 👋")
-        }
-      } catch {
-        // gak bisa kirim pesan, skip aja
-      }
+      await sendLeaveNotice(guild, guildId)
 
       conn.destroy()
       clearCaller(guildId)
+      clearNoticeChannel(guildId)
       cancelPendingLeave(guildId)
       console.log(`👋 [VC] Auto-leave setelah jeda (${guildId})`)
     }, delay)
@@ -143,19 +139,11 @@ async function onVoiceStateUpdate(oldState, newState) {
           return
         }
 
-        try {
-          const textChannel = guild.channels.cache.find(ch =>
-            ch.isTextBased() &&
-            !ch.isThread() &&
-            ch.permissionsFor(guild.members.me)?.has("SendMessages")
-          )
-          if (textChannel) {
-            await textChannel.send("udah gak ada siapa-siapa. gua leave ya 👋")
-          }
-        } catch { /* skip */ }
+        await sendLeaveNotice(guild, guildId)
 
         conn.destroy()
         clearCaller(guildId)
+        clearNoticeChannel(guildId)
         cancelPendingLeave(guildId)
         console.log(`👋 [VC] Auto-leave — VC kosong (${guildId})`)
       }, delay)

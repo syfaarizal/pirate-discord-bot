@@ -1,6 +1,6 @@
 const callerMap    = new Map()  // guildId → userId
 const pendingLeave = new Map()  // guildId → timeoutId
-const movingFlag   = new Map()  // guildId → boolean
+const noticeChannelMap = new Map() // guildId -> text channel id
 
 function setCaller(guildId, userId) {
   callerMap.set(guildId, userId)
@@ -32,20 +32,21 @@ function hasPendingLeave(guildId) {
   return pendingLeave.has(guildId)
 }
 
-function setMoving(guildId) {
-  movingFlag.set(guildId, true)
+function setNoticeChannel(guildId, channelId) {
+  if (!channelId) return
+  noticeChannelMap.set(guildId, channelId)
 }
 
-function clearMoving(guildId) {
-  movingFlag.delete(guildId)
+function getNoticeChannel(guildId) {
+  return noticeChannelMap.get(guildId) ?? null
 }
 
-function isMoving(guildId) {
-  return movingFlag.get(guildId) === true
+function clearNoticeChannel(guildId) {
+  noticeChannelMap.delete(guildId)
 }
 
 module.exports = {
   setCaller, getCaller, clearCaller,
   setPendingLeave, cancelPendingLeave, hasPendingLeave,
-  setMoving, clearMoving, isMoving,
+  setNoticeChannel, getNoticeChannel, clearNoticeChannel,
 }
