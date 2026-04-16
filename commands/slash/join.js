@@ -24,7 +24,6 @@ async function executeJoin(interaction) {
   const guildId = interaction.guildId
   const userId  = interaction.user.id
 
-  // 1. User harus udah di VC
   const userVC = member.voice?.channel
   if (!userVC) {
     return interaction.reply({
@@ -33,7 +32,6 @@ async function executeJoin(interaction) {
     })
   }
 
-  // 2. Cek permission bot di VC user
   const permissions = userVC.permissionsFor(interaction.client.user)
   if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
     return interaction.reply({
@@ -42,7 +40,6 @@ async function executeJoin(interaction) {
     })
   }
 
-  // 3. Cek apakah bot udah di VC di guild ini
   const existing = getVoiceConnection(guildId)
   if (existing) {
     const botChannelId = existing.joinConfig?.channelId
@@ -61,11 +58,9 @@ async function executeJoin(interaction) {
     })
   }
 
-  // 4. Cancel pending leave + clear free mode kalau ada
   cancelPendingLeave(guildId)
   clearFreeMode(guildId)
 
-  // 5. Join & set caller
   try {
     joinVoiceChannel({
       channelId:      userVC.id,
@@ -106,7 +101,6 @@ async function executeLeave(interaction) {
     })
   }
 
-  // Permission check: caller atau admin/mod
   const isAdminOrMod = member && (
     member.guild.ownerId === userId ||
     member.permissions.has(PermissionFlagsBits.Administrator) ||
