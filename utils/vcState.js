@@ -8,7 +8,7 @@ function setCaller(guildId, userId) { callerMap.set(guildId, userId) }
 function getCaller(guildId)         { return callerMap.get(guildId) ?? null }
 function clearCaller(guildId)       { callerMap.delete(guildId) }
 
-// ── Pending leave timer ──
+// ── Pending leave ──
 function setPendingLeave(guildId, timeoutId) { pendingLeave.set(guildId, timeoutId) }
 function hasPendingLeave(guildId)            { return pendingLeave.has(guildId) }
 function cancelPendingLeave(guildId) {
@@ -17,12 +17,12 @@ function cancelPendingLeave(guildId) {
   return false
 }
 
-// ── Notice channel (channel teks tempat /join dipanggil) ──
+// ── Notice channel (text channel tempat /join dipanggil) ──
 function setNoticeChannel(guildId, channelId) { if (channelId) noticeChannelMap.set(guildId, channelId) }
 function getNoticeChannel(guildId)            { return noticeChannelMap.get(guildId) ?? null }
 function clearNoticeChannel(guildId)          { noticeChannelMap.delete(guildId) }
 
-// ── Free mode (gak ada controller, siapapun bisa jadi controller baru) ──
+// ── Free mode ──
 function setFreeMode(guildId)   { freeModeMap.set(guildId, true) }
 function clearFreeMode(guildId) { freeModeMap.delete(guildId) }
 function isFreeMode(guildId)    { return freeModeMap.get(guildId) === true }

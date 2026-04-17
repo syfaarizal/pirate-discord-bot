@@ -4,7 +4,7 @@ const {
   setCaller, getCaller, clearCaller,
   cancelPendingLeave,
   setNoticeChannel, clearNoticeChannel,
-  clearFreeMode,
+  setFreeMode, clearFreeMode, isFreeMode,
 } = require("../../utils/vcState")
 
 // ── /join ──
@@ -24,23 +24,65 @@ async function executeJoin(interaction) {
   const guildId = interaction.guildId
   const userId  = interaction.user.id
 
+  // 1. User harus udah di VC
   const userVC = member.voice?.channel
   if (!userVC) {
     return interaction.reply({
-      content: "join voice dulu baru panggil gua napa 😐",
-      ephemeral: true,
-    })
-  }
-
-  const permissions = userVC.permissionsFor(interaction.client.user)
-  if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
-    return interaction.reply({
-      content: `gua gak punya permission buat masuk ${userVC}. minta admin fix dulu.`,
+      content: "join voice dulu baru panggil gua 😐",
       ephemeral: true,
     })
   }
 
   const existing = getVoiceConnection(guildId)
+
+
+  // FREE MODE: bot udah di VC, siapapun bisa ambil alih sebagai controller
+
+  if (existing && isFreeMode(guildId)) {
+    const botChannelId = existing.joinConfig?.channelId
+
+    // Kalau user di VC yang sama dengan bot
+    if (userVC.id === botChannelId) {
+      cancelPendingLeave(guildId)
+      clearFreeMode(guildId)
+      setCaller(guildId, userId)
+      setNoticeChannel(guildId, interaction.channelId)
+      return interaction.reply({
+        content: `siap, gua ikutin lo sekarang ${userVC} 🫡`,
+      })
+    }
+
+    // User di VC lain → bot pindah ke sana, set sebagai controller
+    const permissions = userVC.permissionsFor(interaction.client.user)
+    if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
+      return interaction.reply({
+        content: `gua gak punya permission buat masuk ${userVC}.`,
+        ephemeral: true,
+      })
+    }
+
+    try {
+      joinVoiceChannel({
+        channelId:      userVC.id,
+        guildId,
+        adapterCreator: interaction.guild.voiceAdapterCreator,
+        selfDeaf:       true,
+        selfMute:       false,
+      })
+      cancelPendingLeave(guildId)
+      clearFreeMode(guildId)
+      setCaller(guildId, userId)
+      setNoticeChannel(guildId, interaction.channelId)
+      return interaction.reply({
+        content: `oke gua pindah ke ${userVC}, lo jadi controller sekarang 🫡`,
+      })
+    } catch (err) {
+      console.error("[VC FreeMode Join Error]", err)
+      return interaction.reply({ content: "gagal pindah VC, coba lagi.", ephemeral: true })
+    }
+  }
+
+  // NORMAL MODE: bot belum di VC
   if (existing) {
     const botChannelId = existing.joinConfig?.channelId
 
@@ -53,18 +95,28 @@ async function executeJoin(interaction) {
 
     const botChannel = interaction.guild.channels.cache.get(botChannelId)
     return interaction.reply({
-      content: `gua lagi di ${botChannel ?? "VC lain"} nih. \`/leave\` dulu atau masuk ke sana baru panggil lagi.`,
+      content: `gua lagi di ${botChannel ?? "VC lain"} nih. \`/leave\` dulu atau masuk ke sana.`,
       ephemeral: true,
     })
   }
 
+  // Cek permission
+  const permissions = userVC.permissionsFor(interaction.client.user)
+  if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
+    return interaction.reply({
+      content: `gua gak punya permission buat masuk ${userVC}. minta admin fix dulu.`,
+      ephemeral: true,
+    })
+  }
+
+  // Cancel pending + clear free mode (just in case)
   cancelPendingLeave(guildId)
   clearFreeMode(guildId)
 
   try {
     joinVoiceChannel({
       channelId:      userVC.id,
-      guildId:        guildId,
+      guildId,
       adapterCreator: interaction.guild.voiceAdapterCreator,
       selfDeaf:       true,
       selfMute:       false,
@@ -73,15 +125,10 @@ async function executeJoin(interaction) {
     setCaller(guildId, userId)
     setNoticeChannel(guildId, interaction.channelId)
 
-    return interaction.reply({
-      content: `oke, gua di ${userVC} 👋`,
-    })
+    return interaction.reply({ content: `oke, gua di ${userVC} 👋` })
   } catch (err) {
     console.error("[VC Join Error]", err)
-    return interaction.reply({
-      content: "gagal masuk VC, coba lagi.",
-      ephemeral: true,
-    })
+    return interaction.reply({ content: "gagal masuk VC, coba lagi.", ephemeral: true })
   }
 }
 
@@ -95,11 +142,11 @@ async function executeLeave(interaction) {
 
   const connection = getVoiceConnection(guildId)
   if (!connection) {
-    return interaction.reply({
-      content: "gua lagi gak di VC mana-mana.",
-      ephemeral: true,
-    })
+    return interaction.reply({ content: "gua lagi gak di VC mana-mana.", ephemeral: true })
   }
+
+  // Di free mode, siapapun boleh /leave
+  const inFreeMode = isFreeMode(guildId)
 
   const isAdminOrMod = member && (
     member.guild.ownerId === userId ||
@@ -112,7 +159,7 @@ async function executeLeave(interaction) {
   )
   const isCaller = callerId === userId
 
-  if (!isCaller && !isAdminOrMod) {
+  if (!inFreeMode && !isCaller && !isAdminOrMod) {
     return interaction.reply({
       content: "yang bisa nyuruh gua pergi itu yang manggil gua, atau admin/mod. bukan lu 😐",
       ephemeral: true,
@@ -125,7 +172,7 @@ async function executeLeave(interaction) {
   clearFreeMode(guildId)
   clearNoticeChannel(guildId)
 
-  return interaction.reply({ content: "oke gua cabut dulu, bye 👋" })
+  return interaction.reply({ content: "oke gua cabut, bye 👋" })
 }
 
 module.exports = { joinData, leaveData, executeJoin, executeLeave }

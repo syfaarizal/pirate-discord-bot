@@ -41,7 +41,6 @@ async function broadcast(client, message) {
 async function broadcastToGuild(client, guildId, message) {
   const channelIds = guildChannelMap.get(guildId)
   if (!channelIds || channelIds.length === 0) {
-    // Guild belum ada di map (mungkin baru gabung), fallback ke semua channel di guild itu
     try {
       const guild = await client.guilds.fetch(guildId)
       if (!guild) return
