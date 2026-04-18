@@ -1,25 +1,39 @@
-const gTTS = require("node-gtts")
-const path = require("path")
-const os   = require("os")
-const fs   = require("fs")
+const { execFile } = require("child_process")
+const path         = require("path")
+const os           = require("os")
+const fs           = require("fs")
 
 /**
- * Convert teks ke file audio .mp3 via Google Translate TTS (unofficial, free)
- * Langsung bisa dimainkan oleh @discordjs/voice via createAudioResource
  *
  * @param {string} text
- * @param {string} lang - language code (default: "id" untuk Bahasa Indonesia)
  * @returns {Promise<string>} path ke temp file .mp3
  */
-function textToSpeech(text, lang = "id") {
+function textToSpeech(text) {
   return new Promise((resolve, reject) => {
-    const tmpPath = path.join(os.tmpdir(), `kichi_tts_${Date.now()}.mp3`)
-    const tts     = gTTS(lang)
+    const base   = path.join(os.tmpdir(), `kichi_tts_${Date.now()}`)
+    const wavPath = `${base}.wav`
+    const mp3Path = `${base}.mp3`
 
-    tts.save(tmpPath, text, (err) => {
-      if (err) return reject(err)
-      resolve(tmpPath)
-    })
+    execFile(
+      "espeak-ng",
+      ["-v", "id", "-s", "145", "-p", "55", "-a", "180", text, "-w", wavPath],
+      (err) => {
+        if (err) return reject(new Error(`espeak-ng error: ${err.message}`))
+
+        // Step 2: ffmpeg WAV → MP3
+        execFile(
+          "ffmpeg",
+          ["-i", wavPath, "-acodec", "libmp3lame", "-q:a", "4", mp3Path, "-y", "-loglevel", "quiet"],
+          (err2) => {
+            // Hapus WAV sementara
+            try { fs.unlinkSync(wavPath) } catch { /* skip */ }
+
+            if (err2) return reject(new Error(`ffmpeg error: ${err2.message}`))
+            resolve(mp3Path)
+          }
+        )
+      }
+    )
   })
 }
 
