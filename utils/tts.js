@@ -3,28 +3,33 @@ const path         = require("path")
 const os           = require("os")
 const fs           = require("fs")
 
-const ESPEAK = "/usr/bin/espeak-ng"
+// Path dari .env — set setelah install-piper.sh selesai
+const PIPER_BIN   = process.env.PIPER_BIN   || "/root/piper/piper"
+const PIPER_MODEL = process.env.PIPER_MODEL || "/root/piper/models/id_ID-argana-medium.onnx"
 
 /**
- * TTS via espeak-ng, output WAV langsung.
- * @discordjs/voice bisa baca WAV tanpa perlu ffmpeg.
- *
+ * TTS via Piper — neural TTS, offline, output WAV
  * @param {string} text
- * @returns {Promise<string>} path ke temp .wav file
+ * @returns {Promise<string>} path ke temp .wav
  */
 function textToSpeech(text) {
   return new Promise((resolve, reject) => {
     const wavPath = path.join(os.tmpdir(), `kichi_tts_${Date.now()}.wav`)
 
-    execFile(
-      ESPEAK,
-      ["-v", "id", "-s", "145", "-p", "55", "-a", "180", text, "-w", wavPath],
+    // Piper baca teks dari stdin, output ke file
+    const proc = execFile(
+      PIPER_BIN,
+      ["--model", PIPER_MODEL, "--output_file", wavPath, "--quiet"],
       (err) => {
-        if (err) return reject(new Error(`espeak-ng error: ${err.message}`))
-        if (!fs.existsSync(wavPath)) return reject(new Error("espeak-ng gagal buat file WAV"))
+        if (err) return reject(new Error(`piper error: ${err.message}`))
+        if (!fs.existsSync(wavPath)) return reject(new Error("piper gagal buat WAV"))
         resolve(wavPath)
       }
     )
+
+    // Tulis teks ke stdin Piper lalu tutup
+    proc.stdin.write(text)
+    proc.stdin.end()
   })
 }
 
