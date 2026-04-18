@@ -3,27 +3,28 @@ const path         = require("path")
 const os           = require("os")
 const fs           = require("fs")
 
-// Hardcode full path supaya PM2 gak kehilangan PATH
-const ESPEAK  = "/usr/bin/espeak-ng"
-const FFMPEG  = "/usr/bin/ffmpeg"
+const ESPEAK = "/usr/bin/espeak-ng"
 
+/**
+ * TTS via espeak-ng, output WAV langsung.
+ * @discordjs/voice bisa baca WAV tanpa perlu ffmpeg.
+ *
+ * @param {string} text
+ * @returns {Promise<string>} path ke temp .wav file
+ */
 function textToSpeech(text) {
   return new Promise((resolve, reject) => {
-    const base    = path.join(os.tmpdir(), `kichi_tts_${Date.now()}`)
-    const wavPath = `${base}.wav`
-    const mp3Path = `${base}.mp3`
+    const wavPath = path.join(os.tmpdir(), `kichi_tts_${Date.now()}.wav`)
 
-    // Step 1: espeak-ng → WAV
-    execFile(ESPEAK, ["-v", "id", "-s", "145", "-p", "55", "-a", "180", text, "-w", wavPath], (err) => {
-      if (err) return reject(new Error(`espeak-ng error: ${err.message}`))
-
-      // Step 2: WAV → MP3
-      execFile(FFMPEG, ["-i", wavPath, "-acodec", "libmp3lame", "-q:a", "4", mp3Path, "-y", "-loglevel", "quiet"], (err2) => {
-        try { fs.unlinkSync(wavPath) } catch { /* skip */ }
-        if (err2) return reject(new Error(`ffmpeg error: ${err2.message}`))
-        resolve(mp3Path)
-      })
-    })
+    execFile(
+      ESPEAK,
+      ["-v", "id", "-s", "145", "-p", "55", "-a", "180", text, "-w", wavPath],
+      (err) => {
+        if (err) return reject(new Error(`espeak-ng error: ${err.message}`))
+        if (!fs.existsSync(wavPath)) return reject(new Error("espeak-ng gagal buat file WAV"))
+        resolve(wavPath)
+      }
+    )
   })
 }
 
