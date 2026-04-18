@@ -17,7 +17,9 @@ const leaveData = new SlashCommandBuilder()
   .setName("leave")
   .setDescription("Suruh Kichi keluar dari voice channel")
 
+// ─────────────────────────────────────────────
 // /join
+// ─────────────────────────────────────────────
 
 async function executeJoin(interaction) {
   const member  = interaction.member
@@ -35,9 +37,9 @@ async function executeJoin(interaction) {
 
   const existing = getVoiceConnection(guildId)
 
-
+  // ─────────────────────────────────────────────
   // FREE MODE: bot udah di VC, siapapun bisa ambil alih sebagai controller
-
+  // ─────────────────────────────────────────────
   if (existing && isFreeMode(guildId)) {
     const botChannelId = existing.joinConfig?.channelId
 
@@ -66,7 +68,7 @@ async function executeJoin(interaction) {
         channelId:      userVC.id,
         guildId,
         adapterCreator: interaction.guild.voiceAdapterCreator,
-        selfDeaf:       true,
+        selfDeaf:       false,
         selfMute:       false,
       })
       cancelPendingLeave(guildId)
@@ -82,7 +84,9 @@ async function executeJoin(interaction) {
     }
   }
 
+  // ─────────────────────────────────────────────
   // NORMAL MODE: bot belum di VC
+  // ─────────────────────────────────────────────
   if (existing) {
     const botChannelId = existing.joinConfig?.channelId
 
@@ -118,7 +122,7 @@ async function executeJoin(interaction) {
       channelId:      userVC.id,
       guildId,
       adapterCreator: interaction.guild.voiceAdapterCreator,
-      selfDeaf:       true,
+      selfDeaf:       false,
       selfMute:       false,
     })
 
@@ -132,7 +136,9 @@ async function executeJoin(interaction) {
   }
 }
 
+// ─────────────────────────────────────────────
 // /leave
+// ─────────────────────────────────────────────
 
 async function executeLeave(interaction) {
   const guildId  = interaction.guildId

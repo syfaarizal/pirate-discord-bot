@@ -1,12 +1,11 @@
-const help    = require("./help")
-const ping    = require("./ping")
-const about   = require("./about")
-const forget  = require("./forget")
+const help     = require("./help")
+const ping     = require("./ping")
+const about    = require("./about")
+const forget   = require("./forget")
 const reminder = require("./reminder")
-const askAi   = require("./askAi")
-const { joinData, leaveData, executeJoin, executeLeave }             = require("./join")
-const { speakData, listenData, setkeywordData,
-        executeSpeak, executeListen, executeSetKeyword }             = require("./speak")
+const askAi    = require("./askAi")
+const { joinData, leaveData, executeJoin, executeLeave } = require("./join")
+const { speakData, executeSpeak }                        = require("./speak")
 
 const slashCommands = [
   { name: help.data.name,     data: help.data,     execute: help.execute },
@@ -15,11 +14,9 @@ const slashCommands = [
   { name: forget.data.name,   data: forget.data,   execute: forget.execute },
   { name: reminder.data.name, data: reminder.data, execute: reminder.execute },
   { name: askAi.data.name,    data: askAi.data,    execute: askAi.execute },
-  { name: joinData.name,      data: joinData,      execute: executeJoin },
-  { name: leaveData.name,     data: leaveData,     execute: executeLeave },
-  { name: speakData.name,     data: speakData,     execute: executeSpeak },
-  { name: listenData.name,    data: listenData,    execute: executeListen },
-  { name: setkeywordData.name, data: setkeywordData, execute: executeSetKeyword },
+  { name: joinData.name,      data: joinData,       execute: executeJoin },
+  { name: leaveData.name,     data: leaveData,      execute: executeLeave },
+  { name: speakData.name,     data: speakData,      execute: executeSpeak },
 ]
 
 function getCommandMap() {
