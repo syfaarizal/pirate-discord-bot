@@ -12,7 +12,6 @@ mkdir -p "$PIPER_DIR" "$MODEL_DIR"
 echo ""
 echo "⬇️  Download Piper binary..."
 
-# Coba wget dulu (lebih reliable untuk redirect), fallback ke curl
 if command -v wget &>/dev/null; then
   wget -q --show-progress --content-disposition \
     "$BINARY_URL" -O /tmp/piper.tar.gz
@@ -22,7 +21,6 @@ else
     "$BINARY_URL" -o /tmp/piper.tar.gz
 fi
 
-# Verifikasi file beneran tar.gz
 FILETYPE=$(file /tmp/piper.tar.gz)
 echo "File type: $FILETYPE"
 
@@ -60,7 +58,6 @@ else
     -o "${MODEL_DIR}/id_ID-argana-medium.onnx.json"
 fi
 
-# Verifikasi model
 MODEL_SIZE=$(stat -c%s "${MODEL_DIR}/id_ID-argana-medium.onnx" 2>/dev/null || echo 0)
 if [ "$MODEL_SIZE" -lt 1000000 ]; then
   echo "❌ Model terlalu kecil ($MODEL_SIZE bytes) — kemungkinan download gagal"

@@ -61,17 +61,10 @@ async function executeSpeak(interaction) {
     })
   }
 
-  // Hanya caller atau admin/mod
-  const member       = interaction.member
-  const isAdminOrMod = member && (
-    member.guild.ownerId === userId ||
-    member.permissions.has(PermissionFlagsBits.Administrator) ||
-    member.permissions.has(PermissionFlagsBits.ManageGuild)
-  )
-
-  if (userId !== callerId && !isAdminOrMod) {
+  // Hanya caller
+  if (userId !== callerId) {
     return interaction.reply({
-      content: "cuma caller atau admin yang bisa nyuruh gua ngomong.",
+      content: "cuma yang manggil gua yang bisa nyuruh gua ngomong.",
       ephemeral: true,
     })
   }
