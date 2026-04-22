@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("discord.js")
-const https = require("https")
+const Genius = require("genius-lyrics")
 
 const GENIUS_TOKEN = process.env.GENIUS_TOKEN
 
@@ -7,92 +7,21 @@ const GENIUS_TOKEN = process.env.GENIUS_TOKEN
 // Helpers
 // ─────────────────────────────────────────────
 
-function httpsGet(url, headers = {}) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers }, res => {
-      let data = ""
-      res.on("data", chunk => (data += chunk))
-      res.on("end", () => resolve({ status: res.statusCode, body: data }))
-    })
-    req.on("error", reject)
-    req.setTimeout(10000, () => { req.destroy(); reject(new Error("timeout")) })
-  })
+// Kata-kata yang nandain bukan lagu asli — translation, cover, dll
+const JUNK_KEYWORDS = [
+  "übersetzung", "traduction", "traduccion", "traducción",
+  "перевод", "tradução", "traduzione", "translation",
+  "terjemahan", "letra", "lirik terjemahan",
+  "karaoke", "instrumental", "cover", "remix",
+  "deutsche", "french", "russian", "spanish", "italian",
+]
+
+function isJunk(title, artist) {
+  const lower = `${title} ${artist}`.toLowerCase()
+  return JUNK_KEYWORDS.some(k => lower.includes(k))
 }
 
-// Search lagu di Genius, return hit pertama
-async function searchGenius(query) {
-  const encoded = encodeURIComponent(query)
-  const url     = `https://api.genius.com/search?q=${encoded}`
-  const { body } = await httpsGet(url, {
-    "Authorization": `Bearer ${GENIUS_TOKEN}`,
-    "User-Agent":    "PirateHelper/1.0",
-  })
-
-  const data = JSON.parse(body)
-  const hits  = data?.response?.hits || []
-  const song  = hits.find(h => h.type === "song")?.result
-
-  if (!song) return null
-  return {
-    id:        song.id,
-    title:     song.title,
-    artist:    song.primary_artist?.name || "Unknown",
-    url:       song.url,
-    thumbnail: song.song_art_image_thumbnail_url || null,
-    header:    song.header_image_thumbnail_url || null,
-  }
-}
-
-// Scrape lirik dari halaman Genius
-// Genius API v3 tidak expose lirik langsung — harus scrape HTML-nya
-async function scrapeLyrics(geniusUrl) {
-  const { body } = await httpsGet(geniusUrl, {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept":     "text/html",
-  })
-
-  // Genius nyimpen lirik di JSON tag window.__PRELOADED_STATE__
-  const match = body.match(/window\.__PRELOADED_STATE__\s*=\s*JSON\.parse\('(.+?)'\);/)
-  if (match) {
-    try {
-      const raw     = match[1].replace(/\\'/g, "'").replace(/\\"/g, '"')
-      const decoded = JSON.parse(JSON.parse(`"${raw}"`))
-      const lyricsData = decoded?.entities?.lyrics
-      if (lyricsData) {
-        const lyricsKey = Object.keys(lyricsData)[0]
-        const html = lyricsData[lyricsKey]?.body?.html || ""
-        return stripHtml(html)
-      }
-    } catch { /* fall through ke method lain */ }
-  }
-
-  // Fallback: ambil dari tag data-lyrics-container
-  const containerMatches = body.match(/data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g)
-  if (containerMatches) {
-    return containerMatches
-      .map(block => stripHtml(block))
-      .join("\n\n")
-      .trim()
-  }
-
-  return null
-}
-
-function stripHtml(html) {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-}
-
-// Split lirik jadi beberapa chunk kalau lebih dari 4096 karakter (batas embed)
+// Split lirik jadi chunks kalau lebih dari 4000 karakter
 function chunkLyrics(lyrics, maxLen = 4000) {
   const chunks = []
   const lines  = lyrics.split("\n")
@@ -138,49 +67,56 @@ async function execute(interaction) {
     })
   }
 
-  const judul  = interaction.options.getString("judul").trim()
-  const artis  = interaction.options.getString("artis")?.trim() || ""
-  const query  = artis ? `${judul} ${artis}` : judul
+  const judul = interaction.options.getString("judul").trim()
+  const artis = interaction.options.getString("artis")?.trim() || ""
+  const query = artis ? `${judul} ${artis}` : judul
 
   await interaction.deferReply()
 
   try {
-    // 1. Search
-    const song = await searchGenius(query)
-    if (!song) {
+    const client  = new Genius.Client(GENIUS_TOKEN)
+    const results = await client.songs.search(query)
+
+    if (!results || results.length === 0) {
       return interaction.editReply(`gak ketemu lagu **${query}** di Genius. coba cek spelling-nya.`)
     }
 
-    // 2. Scrape lirik
-    const lyrics = await scrapeLyrics(song.url)
-    if (!lyrics) {
+    // Ambil hasil pertama yang bukan junk (translation/cover/dll)
+    const song = results.find(s => !isJunk(s.title, s.artist?.name || ""))
+      ?? results[0]  // fallback ke pertama kalau semua junk
+
+    // Fetch lirik
+    const lyrics = await song.lyrics()
+
+    if (!lyrics || lyrics.trim().length === 0) {
       return interaction.editReply(
-        `ketemu lagunya (**${song.title}** — ${song.artist}) tapi liriknya gak bisa diambil.\n🔗 ${song.url}`
+        `ketemu lagunya (**${song.title}** — ${song.artist?.name}) tapi liriknya gak ada.\n🔗 ${song.url}`
       )
     }
 
-    // 3. Split kalau panjang
-    const chunks = chunkLyrics(lyrics)
-    const color  = 0x5865f2
+    const chunks    = chunkLyrics(lyrics)
+    const color     = 0x5865f2
+    const artistName = song.artist?.name || "Unknown"
+    const thumbnail  = song.image || null
 
-    // Embed pertama — header + chunk pertama
-    const firstEmbed = {
-      color,
-      author: {
-        name: song.artist,
-      },
-      title:       `🎵 ${song.title}`,
-      url:          song.url,
-      description:  chunks[0],
-      thumbnail:    song.thumbnail ? { url: song.thumbnail } : undefined,
-      footer: chunks.length > 1
-        ? { text: `Halaman 1/${chunks.length} • via Genius` }
-        : { text: "via Genius" },
-    }
+    // Embed pertama — header + lirik chunk pertama
+    await interaction.editReply({
+      embeds: [{
+        color,
+        author:      { name: artistName },
+        title:       `🎵 ${song.title}`,
+        url:          song.url,
+        description:  chunks[0],
+        thumbnail:    thumbnail ? { url: thumbnail } : undefined,
+        footer: {
+          text: chunks.length > 1
+            ? `Halaman 1/${chunks.length} • via Genius`
+            : "via Genius"
+        },
+      }],
+    })
 
-    await interaction.editReply({ embeds: [firstEmbed] })
-
-    // Kalau ada chunk tambahan, kirim sebagai followUp
+    // Followup kalau lirik panjang
     for (let i = 1; i < chunks.length; i++) {
       await interaction.followUp({
         embeds: [{
