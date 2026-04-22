@@ -4,6 +4,7 @@ const about    = require("./about")
 const forget   = require("./forget")
 const reminder = require("./reminder")
 const askAi    = require("./askAi")
+const lyrics   = require("./lyrics")
 const { joinData, leaveData, executeJoin, executeLeave } = require("./join")
 const { speakData, executeSpeak }                        = require("./speak")
 
@@ -14,6 +15,7 @@ const slashCommands = [
   { name: forget.data.name,   data: forget.data,   execute: forget.execute },
   { name: reminder.data.name, data: reminder.data, execute: reminder.execute },
   { name: askAi.data.name,    data: askAi.data,    execute: askAi.execute },
+  { name: lyrics.data.name,   data: lyrics.data,   execute: lyrics.execute },
   { name: joinData.name,      data: joinData,       execute: executeJoin },
   { name: leaveData.name,     data: leaveData,      execute: executeLeave },
   { name: speakData.name,     data: speakData,      execute: executeSpeak },
