@@ -1,50 +1,10 @@
 const { SlashCommandBuilder } = require("discord.js")
-
-const MUSIXMATCH_TOKEN = process.env.MUSIXMATCH_TOKEN
-const BASE_URL = "https://api.musixmatch.com/ws/1.1"
+const { getLyrics }           = require("../../services/lyricsService")
 
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 
-async function searchTrack(title, artist) {
-  const params = new URLSearchParams({
-    q_track:         title,
-    q_artist:        artist || "",
-    page_size:       "5",
-    page:            "1",
-    s_track_rating:  "desc",
-    apikey:          MUSIXMATCH_TOKEN,
-  })
-
-  const res  = await fetch(`${BASE_URL}/track.search?${params}`)
-  const json = await res.json()
-
-  const status = json?.message?.header?.status_code
-  if (status !== 200) throw new Error(`Musixmatch search error: ${status}`)
-
-  const tracks = json?.message?.body?.track_list
-  if (!tracks || tracks.length === 0) return null
-
-  return tracks[0].track
-}
-
-async function getLyrics(trackId) {
-  const params = new URLSearchParams({
-    track_id: trackId,
-    apikey:   MUSIXMATCH_TOKEN,
-  })
-
-  const res  = await fetch(`${BASE_URL}/track.lyrics.get?${params}`)
-  const json = await res.json()
-
-  const status = json?.message?.header?.status_code
-  if (status !== 200) throw new Error(`Musixmatch lyrics error: ${status}`)
-
-  return json?.message?.body?.lyrics?.lyrics_body || null
-}
-
-// Split lirik jadi chunks kalau lebih dari 4000 karakter
 function chunkLyrics(lyrics, maxLen = 4000) {
   const chunks = []
   const lines  = lyrics.split("\n")
@@ -62,13 +22,13 @@ function chunkLyrics(lyrics, maxLen = 4000) {
   return chunks
 }
 
-// Buang watermark Musixmatch di akhir lirik
-function cleanLyrics(lyrics) {
-  return lyrics
-    .replace(/\*{7}.*?\*{7}/gs, "")  // ******* This Lyrics is NOT for Posting *******
-    .replace(/This Lyrics is NOT.*$/gim, "")
-    .replace(/\(\d+ more lines\).*$/gim, "") // "(42 more lines)" di free tier
-    .trim()
+function footerText({ source, warning, fromCache, page, total }) {
+  const parts = []
+  if (total > 1) parts.push(`Halaman ${page}/${total}`)
+  if (source)    parts.push(`via ${source}`)
+  if (warning)   parts.push("⚠️ lirik mungkin tidak lengkap")
+  if (fromCache) parts.push("📦 cached")
+  return parts.join(" • ") || "Lyrics"
 }
 
 // ─────────────────────────────────────────────
@@ -77,104 +37,67 @@ function cleanLyrics(lyrics) {
 
 const data = new SlashCommandBuilder()
   .setName("lyrics")
-  .setDescription("Cari lirik lagu via Musixmatch")
+  .setDescription("Cari lirik lagu")
   .addStringOption(opt => opt
     .setName("judul")
-    .setDescription("Judul lagu (contoh: Blinding Lights)")
+    .setDescription("Judul lagu (contoh: Yellow)")
     .setRequired(true)
     .setMaxLength(100)
   )
   .addStringOption(opt => opt
     .setName("artis")
-    .setDescription("Nama artis (opsional tapi lebih akurat)")
+    .setDescription("Nama artis — opsional tapi lebih akurat (contoh: Coldplay)")
     .setRequired(false)
     .setMaxLength(100)
   )
 
 async function execute(interaction) {
-  if (!MUSIXMATCH_TOKEN) {
-    return interaction.reply({
-      content: "⚠️ `MUSIXMATCH_TOKEN` belum di-set di `.env`. Daftar di developer.musixmatch.com.",
-      ephemeral: true,
-    })
-  }
-
   const judul = interaction.options.getString("judul").trim()
   const artis = interaction.options.getString("artis")?.trim() || ""
 
   await interaction.deferReply()
 
-  try {
-    // 1. Cari lagu
-    const track = await searchTrack(judul, artis)
+  const result = await getLyrics(judul, artis)
 
-    if (!track) {
-      return interaction.editReply(
-        `gak ketemu lagu **${judul}${artis ? ` — ${artis}` : ""}** di Musixmatch.\ncoba cek spelling atau tambahkan nama artisnya.`
-      )
+  if (!result.lyrics) {
+    const embed = {
+      color: 0xed4245,
+      title: `🔍 ${result.title}`,
+      description: [
+        `gak ketemu liriknya buat **${result.title}**${result.artist ? ` — ${result.artist}` : ""}.`,
+        result.geniusUrl ? `\n🔗 [Lihat di Genius](${result.geniusUrl})` : "",
+      ].join(""),
+      footer: { text: "Coba tambahkan nama artis biar lebih akurat." },
     }
+    return interaction.editReply({ embeds: [embed] })
+  }
 
-    const trackName   = track.track_name
-    const artistName  = track.artist_name
-    const trackId     = track.track_id
-    const albumName   = track.album_name || null
-    const trackUrl    = track.track_share_url || null
+  const chunks = chunkLyrics(result.lyrics)
+  const color  = 0x5865f2
+  const meta   = { source: result.source, warning: result.warning, fromCache: result.fromCache }
 
-    // 2. Ambil lirik
-    const rawLyrics = await getLyrics(trackId)
+  // Embed pertama — ada header lengkap
+  const firstEmbed = {
+    color,
+    author:      { name: result.artist },
+    title:       `🎵 ${result.title}`,
+    url:         result.geniusUrl || undefined,
+    description: chunks[0],
+    thumbnail:   result.thumbnail ? { url: result.thumbnail } : undefined,
+    footer:      { text: footerText({ ...meta, page: 1, total: chunks.length }) },
+  }
 
-    if (!rawLyrics || rawLyrics.trim().length === 0) {
-      return interaction.editReply(
-        `ketemu lagunya (**${trackName}** — ${artistName}) tapi liriknya gak tersedia.\n${trackUrl ? `🔗 ${trackUrl}` : ""}`
-      )
-    }
+  await interaction.editReply({ embeds: [firstEmbed] })
 
-    const lyrics = cleanLyrics(rawLyrics)
-
-    // Cek apakah lirik terpotong (free tier limit)
-    const isTruncated = rawLyrics.includes("more lines")
-
-    const chunks       = chunkLyrics(lyrics)
-    const color        = 0x5865f2
-    const titleDisplay = `${trackName} — ${artistName}`
-
-    // Embed pertama
-    await interaction.editReply({
+  // Chunk tambahan sebagai follow-up
+  for (let i = 1; i < chunks.length; i++) {
+    await interaction.followUp({
       embeds: [{
         color,
-        title:       `🎵 ${titleDisplay}`,
-        url:          trackUrl || undefined,
-        description:  chunks[0],
-        ...(albumName ? { fields: [{ name: "Album", value: albumName, inline: true }] } : {}),
-        footer: {
-          text: [
-            chunks.length > 1 ? `Halaman 1/${chunks.length}` : null,
-            isTruncated ? "⚠️ Lirik terpotong (free tier limit)" : null,
-            "via Musixmatch",
-          ].filter(Boolean).join(" • "),
-        },
+        description: chunks[i],
+        footer: { text: footerText({ ...meta, page: i + 1, total: chunks.length }) },
       }],
     })
-
-    // Followup kalau lirik panjang
-    for (let i = 1; i < chunks.length; i++) {
-      await interaction.followUp({
-        embeds: [{
-          color,
-          description: chunks[i],
-          footer: {
-            text: [
-              `Halaman ${i + 1}/${chunks.length}`,
-              "via Musixmatch",
-            ].join(" • "),
-          },
-        }],
-      })
-    }
-
-  } catch (err) {
-    console.error("[Lyrics Error]", err)
-    return interaction.editReply("gagal ambil lirik nih, coba lagi bentar.")
   }
 }
 
