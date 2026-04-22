@@ -1,25 +1,9 @@
 const { SlashCommandBuilder } = require("discord.js")
-const Genius = require("genius-lyrics")
-
-const GENIUS_TOKEN = process.env.GENIUS_TOKEN
+const getLyrics = require("lyrics-finder")
 
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
-
-// Kata-kata yang nandain bukan lagu asli — translation, cover, dll
-const JUNK_KEYWORDS = [
-  "übersetzung", "traduction", "traduccion", "traducción",
-  "перевод", "tradução", "traduzione", "translation",
-  "terjemahan", "letra", "lirik terjemahan",
-  "karaoke", "instrumental", "cover", "remix",
-  "deutsche", "french", "russian", "spanish", "italian",
-]
-
-function isJunk(title, artist) {
-  const lower = `${title} ${artist}`.toLowerCase()
-  return JUNK_KEYWORDS.some(k => lower.includes(k))
-}
 
 // Split lirik jadi chunks kalau lebih dari 4000 karakter
 function chunkLyrics(lyrics, maxLen = 4000) {
@@ -45,7 +29,7 @@ function chunkLyrics(lyrics, maxLen = 4000) {
 
 const data = new SlashCommandBuilder()
   .setName("lyrics")
-  .setDescription("Cari lirik lagu via Genius")
+  .setDescription("Cari lirik lagu")
   .addStringOption(opt => opt
     .setName("judul")
     .setDescription("Judul lagu (contoh: Blinding Lights)")
@@ -60,58 +44,34 @@ const data = new SlashCommandBuilder()
   )
 
 async function execute(interaction) {
-  if (!GENIUS_TOKEN) {
-    return interaction.reply({
-      content: "⚠️ `GENIUS_TOKEN` belum di-set di `.env`. Daftar di genius.com/api-clients.",
-      ephemeral: true,
-    })
-  }
-
   const judul = interaction.options.getString("judul").trim()
   const artis = interaction.options.getString("artis")?.trim() || ""
-  const query = artis ? `${judul} ${artis}` : judul
 
   await interaction.deferReply()
 
   try {
-    const client  = new Genius.Client(GENIUS_TOKEN)
-    const results = await client.songs.search(query)
-
-    if (!results || results.length === 0) {
-      return interaction.editReply(`gak ketemu lagu **${query}** di Genius. coba cek spelling-nya.`)
-    }
-
-    // Ambil hasil pertama yang bukan junk (translation/cover/dll)
-    const song = results.find(s => !isJunk(s.title, s.artist?.name || ""))
-      ?? results[0]  // fallback ke pertama kalau semua junk
-
-    // Fetch lirik
-    const lyrics = await song.lyrics()
+    const lyrics = await getLyrics(judul, artis)
 
     if (!lyrics || lyrics.trim().length === 0) {
       return interaction.editReply(
-        `ketemu lagunya (**${song.title}** — ${song.artist?.name}) tapi liriknya gak ada.\n🔗 ${song.url}`
+        `gak ketemu lirik untuk **${judul}${artis ? ` — ${artis}` : ""}**.\ncoba cek spelling atau tambahkan nama artisnya.`
       )
     }
 
     const chunks    = chunkLyrics(lyrics)
     const color     = 0x5865f2
-    const artistName = song.artist?.name || "Unknown"
-    const thumbnail  = song.image || null
+    const titleDisplay = artis ? `${judul} — ${artis}` : judul
 
     // Embed pertama — header + lirik chunk pertama
     await interaction.editReply({
       embeds: [{
         color,
-        author:      { name: artistName },
-        title:       `🎵 ${song.title}`,
-        url:          song.url,
-        description:  chunks[0],
-        thumbnail:    thumbnail ? { url: thumbnail } : undefined,
+        title: `🎵 ${titleDisplay}`,
+        description: chunks[0],
         footer: {
           text: chunks.length > 1
-            ? `Halaman 1/${chunks.length} • via Genius`
-            : "via Genius"
+            ? `Halaman 1/${chunks.length} • via AZLyrics`
+            : "via AZLyrics"
         },
       }],
     })
@@ -122,7 +82,7 @@ async function execute(interaction) {
         embeds: [{
           color,
           description: chunks[i],
-          footer: { text: `Halaman ${i + 1}/${chunks.length} • via Genius` },
+          footer: { text: `Halaman ${i + 1}/${chunks.length} • via AZLyrics` },
         }],
       })
     }
