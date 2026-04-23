@@ -177,4 +177,4 @@ pm2 restart pirate-bot
 
 ## About Kichi
 
-Her full name is Pirate Helper. People call her Kichi. She's your server's sarcastic, Gen Z bestie - not an assistant, not a bot, a friend. Built by Kai Shi.
+Her name is Pirate Helper, but everyone calls her Kichi. She's your server's witty, Gen Z companion—not just an assistant or a typical bot, but a friend. Created by Kai Shi.
