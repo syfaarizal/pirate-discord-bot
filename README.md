@@ -1,180 +1,195 @@
-# Pirate Helper - Discord Bot
+# ⚓ Pirate Helper — Discord Bot
 
-A sarcastic, Gen Z AI companion for your Discord server with per-user memory, auto reminders, and a personality that actually slaps.
-
----
-
-## Table of Contents
-
-- [Project Structure](#project-structure)
-- [Setup](#setup)
-- [Features](#features)
-- [Deploying / Resetting Commands](#deploying--resetting-commands)
-- [Key Dependencies](#key-dependencies)
-- [About Kichi](#about-kichi)
+A sarcastic, Gen Z AI companion for your Discord server — with per-user memory, auto reminders, voice capabilities, and a personality that actually slaps.
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```bash
 pirate-discord-bot/
-|
-+-- commands/
-|   +-- slash/
-|       +-- help.js             /help
-|       +-- ping.js             /ping
-|       +-- about.js            /about
-|       +-- forget.js           /forget
-|       +-- reminder.js         /reminder (create, edit, delete, channel)
-|       +-- askAi.js            /ask-ai + AI intent parsing
-|       +-- join.js             /join (voice channel)
-|       +-- lyrics.js           /lyrics (via Musixmatch API)
-|
-+-- events/
-|   +-- ready.js                Bot online, cron init
-|   +-- interactionCreate.js    Slash commands, buttons, modals, select menus
-|
-+-- utils/
-|   +-- memory.js               Per-user chat history + profiles
-|   +-- cooldown.js             Anti-spam cooldown per user
-|   +-- typing.js               Natural typing delay simulation
-|   +-- broadcast.js            Broadcast to registered channels
-|   +-- prompt.js               AI system prompt / personality
-|   +-- reminderConfig.js       Reminder config read/write (per guild)
-|
-+-- cron/
-|   +-- scheduler.js            Cron jobs for auto reminders
-|
-+-- data/
-|   +-- reminders.json          Auto-generated, stores per-guild reminder config
-|
-+-- reset-commands.js           Wipe all registered Discord commands
-+-- deploy-commands.js          Register slash commands to Discord
-+-- .env.example                Environment variable template
-+-- package.json
-+-- index.js                    Entry point
+│
+├── commands/
+│   └── slash/
+│       ├── registry.js       → Central command registry
+│       ├── help.js           → /help
+│       ├── ping.js           → /ping
+│       ├── about.js          → /about
+│       ├── forget.js         → /forget
+│       ├── askAi.js          → /ask-ai + AI intent parsing
+│       ├── reminder.js       → /reminder (create, edit, delete, channel)
+│       ├── join.js           → /join + /leave (voice)
+│       ├── speak.js          → /speak (TTS in voice channel)
+│       └── lyrics.js         → /lyrics (search song lyrics)
+│
+├── events/
+│   ├── ready.js              → Bot online, cron init
+│   ├── interactionCreate.js  → Slash commands, buttons, modals, select menus
+│   ├── messageCreate.js      → Mention & reply handler (AI chat)
+│   └── voiceState.js         → VC join/leave/auto-leave logic
+│
+├── services/                 → Business logic layer
+│   ├── lyricsService.js      → Lyrics orchestrator (cache, fallback chain)
+│   └── providers/
+│       ├── genius.js         → Genius API (metadata + search)
+│       ├── lyricsOvh.js      → lyrics.ovh (primary lyrics)
+│       └── lrclib.js         → LRCLIB (fallback lyrics)
+│
+├── utils/
+│   ├── memory.js             → Per-user chat history + profiles
+│   ├── cooldown.js           → Anti-spam cooldown per user
+│   ├── typing.js             → Natural typing delay simulation
+│   ├── broadcast.js          → Broadcast to registered channels
+│   ├── prompt.js             → AI system prompt / personality
+│   ├── reminderConfig.js     → Reminder config read/write (per guild)
+│   ├── vcState.js            → Voice session state (caller, timers, free mode)
+│   └── tts.js                → Text-to-speech via Piper TTS
+│
+├── cron/
+│   └── scheduler.js          → Cron jobs for auto reminders
+│
+├── data/
+│   └── reminders.json        → Auto-generated, per-guild reminder config
+│
+├── piper/                    → Piper TTS binary + model (not in git)
+│   ├── piper                 → Piper binary
+│   └── models/
+│       └── id_ID-news_tts-medium.onnx
+│
+├── install-piper.sh          → One-time Piper TTS setup script
+├── reset-commands.js         → Wipe all registered Discord commands
+├── deploy-commands.js        → Register slash commands to Discord
+├── .env.example              → Environment variable template
+├── package.json
+└── index.js                  → Entry point
 ```
 
 ---
 
-## Setup
+## 🚀 Setup
 
 ### 1. Install dependencies
-
 ```bash
 npm install
 ```
 
 ### 2. Create `.env` file
-
 ```bash
 cp .env.example .env
 ```
 
 Fill in your credentials:
 
-| Variable           | Description                             |
-| ------------------ | --------------------------------------- |
-| TOKEN              | Discord bot token from Developer Portal |
-| CLIENT_ID          | Your bot's application ID               |
-| AI_KEY             | API key from OpenRouter                 |
-| MUSIXMATCH_TOKEN   | API key from developer.musixmatch.com   |
+| Variable | Description |
+|---|---|
+| `TOKEN` | Discord bot token from Developer Portal |
+| `CLIENT_ID` | Your bot's application ID |
+| `AI_KEY` | API key from OpenRouter |
+| `GENIUS_TOKEN` | Genius API client access token (for `/lyrics`) |
+| `PIPER_BIN` | Path to Piper TTS binary (for `/speak`) |
+| `PIPER_MODEL` | Path to Piper voice model (for `/speak`) |
+| `STARTUP_CHANNEL_ID` | Text channel ID for bot restart notifications |
 
-### 3. Deploy slash commands
+### 3. Install Piper TTS (for voice)
+```bash
+bash install-piper.sh
+```
 
+Then add to `.env`:
+```
+PIPER_BIN=/root/piper/piper
+PIPER_MODEL=/root/piper/models/id_ID-news_tts-medium.onnx
+```
+
+### 4. Set up lyrics service
+```bash
+mkdir -p services/providers
+```
+
+Place the provider files as shown in the project structure above.
+
+### 5. Deploy slash commands
 ```bash
 node deploy-commands.js
 ```
 
-> Commands are deployed globally. Takes up to 1 hour to propagate to all servers.
-
-### 4. Run the bot
-
+### 6. Run the bot
 ```bash
-# Production
-npm start
+# Production (via PM2)
+pm2 start index.js --name pirate-bot
 
-# Dev with auto-restart
+# Dev (auto-restart)
 npm run dev
 ```
 
 ---
 
-## Features
+## 🤖 Features
 
 ### Slash Commands
 
-| Command                          | Access    | Description                            |
-| -------------------------------- | --------- | -------------------------------------- |
-| /help                            | Everyone  | Show all commands                      |
-| /ping                            | Everyone  | Check bot latency                      |
-| /about                           | Everyone  | Info about Kichi                       |
-| /forget                          | Everyone  | Reset your chat memory                 |
-| /ask-ai                          | Everyone  | Chat with Kichi                        |
-| /join                            | Everyone  | Join a voice channel                   |
-| /lyrics                          | Everyone  | Search song lyrics via Musixmatch      |
-| /reminder list                   | Everyone  | View all schedules and status          |
-| /reminder create                 | Admin/Mod | Create a new custom reminder           |
-| /reminder edit                   | Admin/Mod | Edit reminder via interactive UI       |
-| /reminder delete                 | Admin/Mod | Delete a custom reminder               |
-| /reminder channel add/remove/list| Admin/Mod | Manage which channels get reminders    |
+| Command | Who | Description |
+|---|---|---|
+| `/help` | Everyone | Show all commands |
+| `/ping` | Everyone | Check bot latency |
+| `/about` | Everyone | Info about Kichi |
+| `/forget` | Everyone | Reset your chat memory |
+| `/ask-ai` | Everyone | Chat with Kichi — or ask her to create a reminder |
+| `/lyrics` | Everyone | Search song lyrics by title + artist |
+| `/reminder list` | Everyone | View all schedules + status |
+| `/reminder create` | Admin/Mod | Create a new custom reminder |
+| `/reminder edit` | Admin/Mod | Edit reminder: toggle, time, messages |
+| `/reminder delete` | Admin/Mod | Delete a custom reminder |
+| `/reminder channel add/remove/list` | Admin/Mod | Manage reminder channels |
+| `/join` | Everyone | Invite Kichi to your current voice channel |
+| `/leave` | Caller / Admin/Mod | Kick Kichi out of voice |
+| `/speak` | Caller only | Make Kichi say something in VC via TTS |
 
 ### AI Features
-
-- **Per-user memory** - remembers up to 20 messages per person
-- **Personalization** - knows your name, how many times you've talked, first seen date
-- **Anti-spam cooldown** - 5 seconds between requests per user
-- **Natural typing delay** - delay scales with response length
-
-### Lyrics Feature
-
-- Powered by **Musixmatch official API** - no scraping, no Cloudflare issues
-- Search by title only, or title + artist for better accuracy
-- Shows album name and direct Musixmatch link
-- Auto-splits long lyrics into multiple embeds
-- **Note:** Free tier returns up to 30% of lyrics per track. Upgrade at musixmatch.com for full lyrics.
+- **Per-user memory** — remembers up to 20 messages per person
+- **Personalization** — knows your name, message count, first seen date
+- **Mention & reply** — tag Kichi or reply to her messages to chat, no slash command needed
+- **Anti-spam cooldown** — 5 seconds between requests per user
+- **Natural typing delay** — scales with response length
+- **AI intent parsing** — say *"kichi bikinin reminder jam 9 malam"* in `/ask-ai` and she builds it automatically
 
 ### Reminder System
-
 - 3 built-in reminders: **Pagi** (07:00), **Siang** (12:00), **Malam** (21:00)
-- Fully customizable per guild - time, messages, toggle on/off
+- Fully customizable per guild — time, messages, toggle on/off
 - Custom reminders via `/reminder create`
-- Interactive edit UI via select menu, action buttons, and modal form
-- Messages are randomized from a pool each time
+- Interactive edit UI: select menu → action buttons → modal form
+- No `@everyone` — messages are clean and calm
+- Messages randomized from a pool each time
+
+### Voice Features
+- `/join` — Kichi joins the caller's current VC
+- `/leave` — only the caller or admin/mod can kick her out
+- `/speak` — TTS via Piper (offline, no API key, Indonesian voice)
+- **Auto-leave** — if VC is empty for 30–60 seconds, Kichi leaves on her own
+- **Free mode** — if the caller leaves but others remain, anyone can `/join` to become the new controller
+
+### Lyrics
+- `/lyrics judul:Yellow artis:Coldplay`
+- Genius API for metadata (title, artist, thumbnail)
+- lyrics.ovh as primary source → LRCLIB as fallback
+- In-memory cache (6 hours) — repeat requests are instant
+- Auto-splits long lyrics into multiple embeds
+- Filters out translation results automatically
 
 ---
 
-## Deploying / Resetting Commands
-
-If commands look broken or outdated on Discord, wipe and redeploy:
+## 🔧 Deploying / Resetting Commands
 
 ```bash
-node reset-commands.js    # clears all registered commands from Discord
-node deploy-commands.js   # pushes the new command list
-```
-
-Then restart the bot:
-
-```bash
+node reset-commands.js    # wipe all registered commands from Discord
+node deploy-commands.js   # push new command list
 pm2 restart pirate-bot
 ```
 
-> Guild-specific deployment is instant. See `deploy-commands.js` to switch between global and guild mode.
+> Global commands take ~1 hour to propagate. Use `GUILD_ID` in `.env` for instant deployment during testing.
 
 ---
 
-## Key Dependencies
+## 🏴‍☠️ About Kichi
 
-| Package            | Purpose                          |
-| ------------------ | -------------------------------- |
-| discord.js         | Discord API wrapper              |
-| @discordjs/voice   | Voice channel support            |
-| node-cron          | Cron job scheduler for reminders |
-| dotenvx            | Environment variable loader      |
-
----
-
-## About Kichi
-
-Her name is Pirate Helper, but everyone calls her Kichi. She's your server's witty, Gen Z companion—not just an assistant or a typical bot, but a friend. Created by Kai Shi.
+Her full name is Pirate Helper. People call her Kichi. She's your server's sarcastic, Gen Z bestie — not an assistant, not a bot, a *friend*. Built by Kai Shi.
