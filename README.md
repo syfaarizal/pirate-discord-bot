@@ -69,11 +69,13 @@ pirate-discord-bot/
 ## 🚀 Setup
 
 ### 1. Install dependencies
+
 ```bash
 npm install
 ```
 
 ### 2. Create `.env` file
+
 ```bash
 cp .env.example .env
 ```
@@ -81,7 +83,7 @@ cp .env.example .env
 Fill in your credentials:
 
 | Variable | Description |
-|---|---|
+| --- | --- |
 | `TOKEN` | Discord bot token from Developer Portal |
 | `CLIENT_ID` | Your bot's application ID |
 | `AI_KEY` | API key from OpenRouter |
@@ -91,17 +93,20 @@ Fill in your credentials:
 | `STARTUP_CHANNEL_ID` | Text channel ID for bot restart notifications |
 
 ### 3. Install Piper TTS (for voice)
+
 ```bash
 bash install-piper.sh
 ```
 
 Then add to `.env`:
-```
+
+```bash
 PIPER_BIN=/root/piper/piper
 PIPER_MODEL=/root/piper/models/id_ID-news_tts-medium.onnx
 ```
 
 ### 4. Set up lyrics service
+
 ```bash
 mkdir -p services/providers
 ```
@@ -109,11 +114,13 @@ mkdir -p services/providers
 Place the provider files as shown in the project structure above.
 
 ### 5. Deploy slash commands
+
 ```bash
 node deploy-commands.js
 ```
 
 ### 6. Run the bot
+
 ```bash
 # Production (via PM2)
 pm2 start index.js --name pirate-bot
@@ -129,7 +136,7 @@ npm run dev
 ### Slash Commands
 
 | Command | Who | Description |
-|---|---|---|
+| --- | --- | --- |
 | `/help` | Everyone | Show all commands |
 | `/ping` | Everyone | Check bot latency |
 | `/about` | Everyone | Info about Kichi |
@@ -146,6 +153,7 @@ npm run dev
 | `/speak` | Caller only | Make Kichi say something in VC via TTS |
 
 ### AI Features
+
 - **Per-user memory** — remembers up to 20 messages per person
 - **Personalization** — knows your name, message count, first seen date
 - **Mention & reply** — tag Kichi or reply to her messages to chat, no slash command needed
@@ -154,6 +162,7 @@ npm run dev
 - **AI intent parsing** — say *"kichi bikinin reminder jam 9 malam"* in `/ask-ai` and she builds it automatically
 
 ### Reminder System
+
 - 3 built-in reminders: **Pagi** (07:00), **Siang** (12:00), **Malam** (21:00)
 - Fully customizable per guild — time, messages, toggle on/off
 - Custom reminders via `/reminder create`
@@ -162,6 +171,7 @@ npm run dev
 - Messages randomized from a pool each time
 
 ### Voice Features
+
 - `/join` — Kichi joins the caller's current VC
 - `/leave` — only the caller or admin/mod can kick her out
 - `/speak` — TTS via Piper (offline, no API key, Indonesian voice)
@@ -169,6 +179,7 @@ npm run dev
 - **Free mode** — if the caller leaves but others remain, anyone can `/join` to become the new controller
 
 ### Lyrics
+
 - `/lyrics judul:Yellow artis:Coldplay`
 - Genius API for metadata (title, artist, thumbnail)
 - lyrics.ovh as primary source → LRCLIB as fallback
