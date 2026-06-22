@@ -5,6 +5,7 @@ const { onReady }             = require("./events/ready")
 const { onInteractionCreate } = require("./events/interactionCreate")
 const { onMessageCreate }     = require("./events/messageCreate")
 const { onVoiceStateUpdate }  = require("./events/voiceState")
+const { onGuildCreate }       = require("./events/guildCreate")
 
 const requiredEnvs = ["TOKEN", "AI_KEY", "CLIENT_ID"]
 for (const key of requiredEnvs) {
@@ -18,7 +19,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildVoiceStates,  // wajib buat detect join/leave/pindah VC
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
   ],
 })
@@ -27,6 +28,7 @@ client.once("clientReady",       () => onReady(client))
 client.on("interactionCreate",   (i) => onInteractionCreate(i))
 client.on("messageCreate",       (m) => onMessageCreate(m))
 client.on("voiceStateUpdate",    (o, n) => onVoiceStateUpdate(o, n))
+client.on("guildCreate",         (g) => onGuildCreate(g))   // ← auto-deploy saat bot di-add
 
 process.on("unhandledRejection", err => console.error("⚠️ Unhandled Rejection:", err))
 process.on("uncaughtException",  err => console.error("💥 Uncaught Exception:",  err))

@@ -26,25 +26,27 @@ async function deploy() {
     }
 
     if (guildIds.length > 0) {
-      // Prevent duplicate command rows in a guild (global + guild overlap).
+      // Mode testing: deploy ke guild spesifik (langsung aktif, tanpa delay 1 jam)
+      // Global commands dikosongkan dulu supaya gak dobel di server testing kamu.
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: [] })
-      console.log("🧹 Global commands dibersihin dulu biar gak dobel di server.")
+      console.log("🧹 Global commands dibersihkan supaya tidak dobel di server testing.")
 
       for (const guildId of guildIds) {
         await rest.put(
           Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
           { body: commands }
         )
-        console.log(`✅ Deployed to guild ${guildId} (biasanya langsung muncul)`)
+        console.log(`✅ Deployed ke guild ${guildId} (langsung aktif)`)
       }
-    } else {
-      console.log("ℹ️ Deploy mode: global command only.")
-      await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
-      console.log("✅ Deployed global (aktif ~1 jam)")
-    }
 
-    if (!process.env.GUILD_ID && !process.env.GUILD_IDS && process.env.CHANNEL_IDS) {
-      console.log("ℹ️  CHANNEL_IDS terdeteksi, tapi deploy slash command butuh GUILD_ID (ID server), bukan ID channel.")
+      console.log("\n⚠️  Mode testing aktif (GUILD_ID/GUILD_IDS terdeteksi).")
+      console.log("   Global commands dikosongkan — user lain TIDAK bisa pakai bot.")
+      console.log("   Hapus GUILD_ID & GUILD_IDS dari .env untuk deploy production.\n")
+    } else {
+      // Mode production: deploy global — aktif di semua server yang sudah/akan add bot
+      await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
+      console.log("✅ Global commands deployed (aktif ~1 jam, berlaku untuk semua server)")
+      console.log("ℹ️  Server yang baru add bot akan otomatis dapat commands via event guildCreate.\n")
     }
   } catch (err) {
     console.error("❌ Deploy gagal:", err)
