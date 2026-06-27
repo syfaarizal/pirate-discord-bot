@@ -17,10 +17,6 @@ const leaveData = new SlashCommandBuilder()
   .setName("leave")
   .setDescription("Suruh Kichi keluar dari voice channel")
 
-// ─────────────────────────────────────────────
-// /join
-// ─────────────────────────────────────────────
-
 async function executeJoin(interaction) {
   const member  = interaction.member
   const guildId = interaction.guildId
@@ -37,13 +33,9 @@ async function executeJoin(interaction) {
 
   const existing = getVoiceConnection(guildId)
 
-  // ─────────────────────────────────────────────
-  // FREE MODE: bot udah di VC, siapapun bisa ambil alih sebagai controller
-  // ─────────────────────────────────────────────
   if (existing && isFreeMode(guildId)) {
     const botChannelId = existing.joinConfig?.channelId
 
-    // Kalau user di VC yang sama dengan bot
     if (userVC.id === botChannelId) {
       cancelPendingLeave(guildId)
       clearFreeMode(guildId)
@@ -54,7 +46,6 @@ async function executeJoin(interaction) {
       })
     }
 
-    // User di VC lain → bot pindah ke sana, set sebagai controller
     const permissions = userVC.permissionsFor(interaction.client.user)
     if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
       return interaction.reply({
@@ -84,9 +75,6 @@ async function executeJoin(interaction) {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // NORMAL MODE: bot belum di VC
-  // ─────────────────────────────────────────────
   if (existing) {
     const botChannelId = existing.joinConfig?.channelId
 
@@ -135,10 +123,6 @@ async function executeJoin(interaction) {
     return interaction.reply({ content: "gagal masuk VC, coba lagi.", ephemeral: true })
   }
 }
-
-// ─────────────────────────────────────────────
-// /leave
-// ─────────────────────────────────────────────
 
 async function executeLeave(interaction) {
   const guildId  = interaction.guildId
