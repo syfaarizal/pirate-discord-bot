@@ -26,8 +26,6 @@ async function deploy() {
     }
 
     if (guildIds.length > 0) {
-      // Mode testing: deploy ke guild spesifik (langsung aktif, tanpa delay 1 jam)
-      // Global commands dikosongkan dulu supaya gak dobel di server testing kamu.
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: [] })
       console.log("🧹 Global commands dibersihkan supaya tidak dobel di server testing.")
 
@@ -43,7 +41,6 @@ async function deploy() {
       console.log("   Global commands dikosongkan — user lain TIDAK bisa pakai bot.")
       console.log("   Hapus GUILD_ID & GUILD_IDS dari .env untuk deploy production.\n")
     } else {
-      // Mode production: deploy global — aktif di semua server yang sudah/akan add bot
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
       console.log("✅ Global commands deployed (berlaku untuk semua server)")
       console.log("ℹ️  Server yang baru add bot akan otomatis mendapatkan global commands ini.\n")

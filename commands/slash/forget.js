@@ -17,7 +17,7 @@ async function execute(interaction) {
 
   return interaction.reply({
     content: responses[Math.floor(Math.random() * responses.length)],
-    ephemeral: true   // biar gak spam channel
+    ephemeral: true
   })
 }
 

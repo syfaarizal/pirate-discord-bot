@@ -12,11 +12,9 @@ const {
 } = require("../../utils/reminderConfig")
 
 const ai = new OpenAI({
-  apiKey:   process.env.AI_KEY,
-  baseURL:  "https://openrouter.ai/api/v1",
+  apiKey: process.env.AI_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
 })
-
-// Command Definition
 
 const data = new SlashCommandBuilder()
   .setName("ask-ai")
@@ -27,8 +25,6 @@ const data = new SlashCommandBuilder()
     .setRequired(true)
     .setMaxLength(1000)
   )
-
-// Intent Detection — apakah ini request reminder?
 
 const INTENT_SYSTEM = `
 Kamu adalah parser intent untuk bot Discord bernama Kichi.
@@ -55,16 +51,16 @@ Balas HANYA dengan JSON valid. Tidak ada teks lain. Tidak ada markdown backtick.
 async function detectReminderIntent(userMessage) {
   try {
     const res = await ai.chat.completions.create({
-      model:       "openai/gpt-4o-mini",
+      model: "openai/gpt-4o-mini",
       temperature: 0.2,
-      max_tokens:  400,
+      max_tokens: 400,
       messages: [
-        { role: "system",  content: INTENT_SYSTEM },
-        { role: "user",    content: userMessage },
+        { role: "system", content: INTENT_SYSTEM },
+        { role: "user", content: userMessage },
       ],
     })
 
-    const raw  = res.choices[0].message.content.trim()
+    const raw = res.choices[0].message.content.trim()
     const json = JSON.parse(raw)
     return json
   } catch {
@@ -72,12 +68,8 @@ async function detectReminderIntent(userMessage) {
   }
 }
 
-// Execute Reminder Intent
-
 async function executeReminderIntent(intent, guildId) {
   const { action, key, label, hour, minute, emoji, messages, enabled } = intent
-
-  // Validasi dasar
   if (!key || typeof hour !== "number" || typeof minute !== "number") {
     return { ok: false, reason: "Data reminder gak lengkap." }
   }
@@ -91,8 +83,8 @@ async function executeReminderIntent(intent, guildId) {
     }
 
     const ok = addCustomReminder(guildId, key, {
-      label:  label || key,
-      emoji:  emoji || "🔔",
+      label: label || key,
+      emoji: emoji || "🔔",
       hour,
       minute,
     })
@@ -100,19 +92,16 @@ async function executeReminderIntent(intent, guildId) {
     if (!ok) {
       return { ok: false, reason: `Reminder \`${key}\` udah ada.` }
     }
-
-    // Tambah pesan kalau ada
     if (Array.isArray(messages) && messages.length > 0) {
       for (const msg of messages.slice(0, 5)) {
         addReminderText(guildId, key, msg)
       }
     }
-
     return {
       ok: true,
       key,
-      label:  label || key,
-      emoji:  emoji || "🔔",
+      label: label || key,
+      emoji: emoji || "🔔",
       hour,
       minute,
       msgCount: (messages || []).length,
@@ -128,20 +117,15 @@ async function executeReminderIntent(intent, guildId) {
   return { ok: false, reason: "action tidak dikenali" }
 }
 
-// Format jam helper
-
 function fmt(h, m) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
 }
 
-// Main Execute
-
 async function execute(interaction) {
-  const userId   = interaction.user.id
+  const userId = interaction.user.id
   const username = interaction.user.globalName || interaction.user.username
-  const prompt   = interaction.options.getString("pesan")
+  const prompt = interaction.options.getString("pesan")
 
-  // Cooldown check
   if (isOnCooldown(userId)) {
     const sisa = getRemainingCooldown(userId)
     return interaction.reply({
@@ -157,18 +141,15 @@ async function execute(interaction) {
   addMessage(userId, "user", `[${username}]: ${prompt}`)
   const history = getHistory(userId)
 
-  // ── Cek apakah ada intent reminder ──
   const guildId = interaction.guildId
   if (guildId) {
     const intent = await detectReminderIntent(prompt)
-
     if (intent.action === "create_reminder") {
-      // Cek permission
       const member = interaction.member
       const isAdmin = member && (
         member.guild.ownerId === member.id ||
-        member.permissions.has(0x8n) || // ADMINISTRATOR
-        member.permissions.has(0x20n)   // MANAGE_GUILD
+        member.permissions.has(0x8n) ||
+        member.permissions.has(0x20n)
       )
 
       if (!isAdmin) {
@@ -199,12 +180,8 @@ async function execute(interaction) {
         addMessage(userId, "assistant", reply)
         return interaction.editReply(reply)
       }
-
-      // Kalau gagal, fall through ke AI chat biasa dengan context error
     }
   }
-
-  // ── Normal AI Chat ──
   const personalizedSystem = `
 ${SYSTEM_PROMPT}
 
@@ -215,8 +192,8 @@ CONTEXT USER SEKARANG
 - Total pesan ke bot: ${profile.messageCount}
 - Pertama ngobrol: ${new Date(profile.firstSeen).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
 ${profile.messageCount === 1
-  ? "- Ini percakapan PERTAMA mereka. Kasih sapaan awal yang asik!"
-  : "- Udah pernah ngobrol sebelumnya. Jangan sapaan pirate lagi."}
+      ? "- Ini percakapan PERTAMA mereka. Kasih sapaan awal yang asik!"
+      : "- Udah pernah ngobrol sebelumnya. Jangan sapaan pirate lagi."}
 
 KEMAMPUAN TAMBAHAN (sebut kalau relevan):
 - Lu bisa bikin reminder otomatis kalau user minta, contoh: "kichi bikinin reminder tiap jam 9 malam"
@@ -225,13 +202,13 @@ KEMAMPUAN TAMBAHAN (sebut kalau relevan):
 
   try {
     const completion = await ai.chat.completions.create({
-      model:       "openai/gpt-4o-mini",
+      model: "openai/gpt-4o-mini",
       temperature: 0.92,
-      max_tokens:  512,
+      max_tokens: 512,
       messages: [
         { role: "system", content: personalizedSystem },
         ...history.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
-        { role: "user",   content: `[${username}]: ${prompt}` },
+        { role: "user", content: `[${username}]: ${prompt}` },
       ],
     })
 

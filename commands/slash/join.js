@@ -7,22 +7,19 @@ const {
   setFreeMode, clearFreeMode, isFreeMode,
 } = require("../../utils/vcState")
 
-// ── /join ──
 const joinData = new SlashCommandBuilder()
   .setName("join")
   .setDescription("Panggil Kichi ke voice channel sekarang")
 
-// ── /leave ──
 const leaveData = new SlashCommandBuilder()
   .setName("leave")
   .setDescription("Suruh Kichi keluar dari voice channel")
 
 async function executeJoin(interaction) {
-  const member  = interaction.member
+  const member = interaction.member
   const guildId = interaction.guildId
-  const userId  = interaction.user.id
+  const userId = interaction.user.id
 
-  // 1. User harus udah di VC
   const userVC = member.voice?.channel
   if (!userVC) {
     return interaction.reply({
@@ -56,11 +53,11 @@ async function executeJoin(interaction) {
 
     try {
       joinVoiceChannel({
-        channelId:      userVC.id,
+        channelId: userVC.id,
         guildId,
         adapterCreator: interaction.guild.voiceAdapterCreator,
-        selfDeaf:       false,
-        selfMute:       false,
+        selfDeaf: false,
+        selfMute: false,
       })
       cancelPendingLeave(guildId)
       clearFreeMode(guildId)
@@ -92,7 +89,6 @@ async function executeJoin(interaction) {
     })
   }
 
-  // Cek permission
   const permissions = userVC.permissionsFor(interaction.client.user)
   if (!permissions?.has(PermissionFlagsBits.Connect) || !permissions?.has(PermissionFlagsBits.Speak)) {
     return interaction.reply({
@@ -101,17 +97,16 @@ async function executeJoin(interaction) {
     })
   }
 
-  // Cancel pending + clear free mode (just in case)
   cancelPendingLeave(guildId)
   clearFreeMode(guildId)
 
   try {
     joinVoiceChannel({
-      channelId:      userVC.id,
+      channelId: userVC.id,
       guildId,
       adapterCreator: interaction.guild.voiceAdapterCreator,
-      selfDeaf:       false,
-      selfMute:       false,
+      selfDeaf: false,
+      selfMute: false,
     })
 
     setCaller(guildId, userId)
@@ -125,9 +120,9 @@ async function executeJoin(interaction) {
 }
 
 async function executeLeave(interaction) {
-  const guildId  = interaction.guildId
-  const userId   = interaction.user.id
-  const member   = interaction.member
+  const guildId = interaction.guildId
+  const userId = interaction.user.id
+  const member = interaction.member
   const callerId = getCaller(guildId)
 
   const connection = getVoiceConnection(guildId)
@@ -135,7 +130,6 @@ async function executeLeave(interaction) {
     return interaction.reply({ content: "gua lagi gak di VC mana-mana.", ephemeral: true })
   }
 
-  // Di free mode, siapapun boleh /leave
   const inFreeMode = isFreeMode(guildId)
 
   const isAdminOrMod = member && (

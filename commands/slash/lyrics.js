@@ -1,14 +1,10 @@
 const { SlashCommandBuilder } = require("discord.js")
-const { getLyrics }           = require("../../services/lyricsService")
-
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
+const { getLyrics } = require("../../services/lyricsService")
 
 function chunkLyrics(lyrics, maxLen = 4000) {
   const chunks = []
-  const lines  = lyrics.split("\n")
-  let current  = ""
+  const lines = lyrics.split("\n")
+  let current = ""
 
   for (const line of lines) {
     if ((current + "\n" + line).length > maxLen) {
@@ -25,15 +21,11 @@ function chunkLyrics(lyrics, maxLen = 4000) {
 function footerText({ source, warning, fromCache, page, total }) {
   const parts = []
   if (total > 1) parts.push(`Halaman ${page}/${total}`)
-  if (source)    parts.push(`via ${source}`)
-  if (warning)   parts.push("⚠️ lirik mungkin tidak lengkap")
+  if (source) parts.push(`via ${source}`)
+  if (warning) parts.push("⚠️ lirik mungkin tidak lengkap")
   if (fromCache) parts.push("📦 cached")
   return parts.join(" • ") || "Lyrics"
 }
-
-// ─────────────────────────────────────────────
-// Command
-// ─────────────────────────────────────────────
 
 const data = new SlashCommandBuilder()
   .setName("lyrics")
@@ -73,23 +65,21 @@ async function execute(interaction) {
   }
 
   const chunks = chunkLyrics(result.lyrics)
-  const color  = 0x5865f2
-  const meta   = { source: result.source, warning: result.warning, fromCache: result.fromCache }
+  const color = 0x5865f2
+  const meta = { source: result.source, warning: result.warning, fromCache: result.fromCache }
 
-  // Embed pertama — ada header lengkap
   const firstEmbed = {
     color,
-    author:      { name: result.artist },
-    title:       `🎵 ${result.title}`,
-    url:         result.geniusUrl || undefined,
+    author: { name: result.artist },
+    title: `🎵 ${result.title}`,
+    url: result.geniusUrl || undefined,
     description: chunks[0],
-    thumbnail:   result.thumbnail ? { url: result.thumbnail } : undefined,
-    footer:      { text: footerText({ ...meta, page: 1, total: chunks.length }) },
+    thumbnail: result.thumbnail ? { url: result.thumbnail } : undefined,
+    footer: { text: footerText({ ...meta, page: 1, total: chunks.length }) },
   }
 
   await interaction.editReply({ embeds: [firstEmbed] })
 
-  // Chunk tambahan sebagai follow-up
   for (let i = 1; i < chunks.length; i++) {
     await interaction.followUp({
       embeds: [{
