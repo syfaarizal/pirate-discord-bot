@@ -45,8 +45,8 @@ async function deploy() {
     } else {
       // Mode production: deploy global — aktif di semua server yang sudah/akan add bot
       await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
-      console.log("✅ Global commands deployed (aktif ~1 jam, berlaku untuk semua server)")
-      console.log("ℹ️  Server yang baru add bot akan otomatis dapat commands via event guildCreate.\n")
+      console.log("✅ Global commands deployed (berlaku untuk semua server)")
+      console.log("ℹ️  Server yang baru add bot akan otomatis mendapatkan global commands ini.\n")
     }
   } catch (err) {
     console.error("❌ Deploy gagal:", err)
